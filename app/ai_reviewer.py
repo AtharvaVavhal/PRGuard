@@ -1,18 +1,17 @@
 import json
 import logging
+import os
 from typing import Optional
-from openai import OpenAI
+
+import google.generativeai as genai
 
 from app.config import settings
 from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 
-# ---------------------------------------------------------------------------
-# Prompt Design
-# ---------------------------------------------------------------------------
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
 
@@ -40,7 +39,7 @@ STRICT INSTRUCTIONS:
 - Do not soften language. Be direct.
 - Score must reflect issue severity and count. Multiple HIGH issues cannot score above 6.
 
-OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explanation:
+OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explanation, no ```json fences:
 {
   "score": <float 0-10>,
   "summary": "<2-3 sentence verdict on overall PR quality>",
@@ -57,45 +56,41 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
 }"""
 
 
-def _build_user_prompt(pr_title: str, diff: str) -> str:
-    # Truncate diff to avoid token overflow; keep first 12k chars
+def _build_prompt(pr_title: str, diff: str) -> str:
     MAX_DIFF_CHARS = 12_000
     truncated = diff[:MAX_DIFF_CHARS]
     if len(diff) > MAX_DIFF_CHARS:
         truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
-
-    return f"""PR TITLE: {pr_title}
-
-DIFF:
-{truncated}
-
-Review the above diff strictly. Return only the JSON object."""
+    return f"{SYSTEM_PROMPT}\n\nPR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
 
 
-# ---------------------------------------------------------------------------
-# Main review function
-# ---------------------------------------------------------------------------
 def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
-    """Call OpenAI and parse the structured review response."""
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
 
-    logger.info("Sending diff to AI for review (diff_len=%d)", len(diff))
+    logger.info("Sending diff to Gemini for review (diff_len=%d)", len(diff))
 
-    response = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        temperature=0.1,        # Low temp = consistent scoring
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(pr_title, diff)},
-        ],
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        generation_config=genai.GenerationConfig(
+            temperature=0.1,
+            response_mime_type="application/json",
+        ),
     )
 
-    raw = response.choices[0].message.content
-    logger.debug("Raw AI response: %s", raw)
+    response = model.generate_content(_build_prompt(pr_title, diff))
+    raw = response.text.strip()
 
+    # Strip markdown fences if Gemini adds them despite mime type
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip()
+
+    logger.debug("Raw Gemini response: %s", raw[:500])
     data = json.loads(raw)
+
     issues = [
         CodeIssue(
             file=i["file"],
@@ -119,14 +114,9 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
     return result
 
 
-# ---------------------------------------------------------------------------
-# Mock reviewer (for local testing without OpenAI key)
-# ---------------------------------------------------------------------------
 def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
-    """Returns a deterministic fake result. Use for local testing."""
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
-
     issues = [
         CodeIssue(
             file="src/handler.py",
@@ -156,7 +146,7 @@ def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) ->
     score = 4.5
     return ReviewResult(
         score=score,
-        summary="This PR has structural and reliability problems. Two HIGH severity issues must be resolved before merge. The main handler function violates single-responsibility and lacks error handling on external calls.",
+        summary="This PR has structural and reliability problems. Two HIGH severity issues must be resolved before merge.",
         issues=issues,
         passed=score >= threshold,
     )
