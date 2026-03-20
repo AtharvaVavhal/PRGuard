@@ -3,14 +3,15 @@ import logging
 import os
 from typing import Optional
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from app.config import settings
 from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -70,18 +71,18 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
 
     logger.info("Sending diff to Gemini for review (diff_len=%d)", len(diff))
 
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        generation_config=genai.GenerationConfig(
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=_build_prompt(pr_title, diff),
+        config=types.GenerateContentConfig(
             temperature=0.1,
             response_mime_type="application/json",
         ),
     )
 
-    response = model.generate_content(_build_prompt(pr_title, diff))
     raw = response.text.strip()
 
-    # Strip markdown fences if Gemini adds them despite mime type
+    # Strip markdown fences if model adds them despite mime type
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
