@@ -1,125 +1,307 @@
-# PR Reviewer — AI-Powered GitHub Quality Gate
+<div align="center">
 
-Analyzes pull request diffs, scores code quality (0–10), and blocks merges below threshold.
+<img src="https://img.shields.io/badge/PRGuard-AI%20Code%20Quality%20Gate-00ff88?style=for-the-badge&logo=shield&logoColor=black" alt="PRGuard"/>
 
-## Architecture
+# 🛡️ PRGuard
+
+### *Your code's last line of defense*
+
+**AI-powered Pull Request reviewer that scores, comments, auto-fixes, and blocks bad code from reaching production.**
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-railway.app-7B2FBE?style=flat-square&logo=railway)](https://prguard-production-eae8.up.railway.app)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Groq](https://img.shields.io/badge/Groq-LLaMA%203.3-FF6B35?style=flat-square)](https://groq.com)
+[![Railway](https://img.shields.io/badge/Deployed%20on-Railway-7B2FBE?style=flat-square&logo=railway)](https://railway.app)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
+<br/>
+
+![PRGuard Dashboard](https://img.shields.io/badge/Dashboard-Mission%20Control-00ff88?style=for-the-badge)
+
+</div>
+
+---
+
+## ✨ What is PRGuard?
+
+PRGuard is a GitHub bot that **automatically reviews every Pull Request** using LLaMA 3.3 running on Groq. It scores your code, posts inline comments on issues, creates auto-fix branches, and blocks bad code from merging — all within seconds of opening a PR.
+
+No configuration required. Just install the webhook and it works.
+
+---
+
+## 🚀 Features
+
+| Feature | Description |
+|---|---|
+| 🤖 **AI Code Review** | Scores every PR 0–10 across 8 quality categories |
+| 💬 **Inline Comments** | Posts issues directly on the affected line in the diff |
+| 🔥 **Auto-Fix Branch** | Creates a `prguard/fix-pr-*` branch with AI-applied corrections |
+| 📊 **Team Dashboard** | Live dashboard tracking scores, trends, and pass rates across all repos |
+| ⚙️ **Custom Rules** | Define team standards in `prguard.yml` — bot enforces them automatically |
+| 💬 **PR Chat** | Comment `/prguard <question>` to ask the bot anything about the review |
+| 🔄 **Smart Retry** | Handles API rate limits with exponential backoff (4 attempts) |
+| ✅ **Commit Status** | Sets GitHub green ✅ or red ❌ check on every PR |
+
+---
+
+## 📸 Screenshots
+
+### Team Dashboard
+> Live metrics, score trends, issue categories, and review history
+
+```
+🛡️ PRGUARD  Mission Control                              ● ONLINE  01:12:35
+
+// METRICS
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────┐
+│  TOTAL REVIEWS  │ │   PASS RATE     │ │   AVG SCORE     │ │    REPOS    │
+│      12         │ │     75%         │ │      7.2        │ │      3      │
+└─────────────────┘ └─────────────────┘ └─────────────────┘ └─────────────┘
+```
+
+### PR Review Comment
+```
+## ❌ PRGuard — Quality Gate FAILED
+
+░░░░░░░░░░ 4.2 / 10
+
+> Score 4.2/10 is below the threshold of 7/10.
+
+### 📋 Verdict
+Multiple high severity issues found. Naming violations and missing error handling.
+
+### 🐛 Issues — 🔴 2 High · 🟡 2 Med · 🟢 1 Low
+
+<details>
+<summary>🔴 ⚠️ ERROR_HANDLING — `app/main.py` · L80</summary>
+Problem: Missing try/except on network call...
+Fix: Wrap in try/except httpx.HTTPStatusError...
+</details>
+```
+
+---
+
+## 🔍 Review Categories
+
+PRGuard checks 8 categories on every PR:
+
+```
+🏷️  Naming        — Single letters, abbreviations, misleading names
+🧩  Complexity    — Functions >30 lines, deeply nested conditionals
+♻️  Duplication   — Repeated logic without abstraction
+⚠️  Error Handling — Missing try/except on I/O, network, DB calls
+🔢  Magic Values   — Hardcoded strings/numbers that should be config
+🔐  Security       — Secrets in code, SQL injection, missing validation
+🛡️  Type Safety    — Missing type hints in Python, implicit `any` in TS
+💀  Dead Code      — Commented-out blocks, unused imports/variables
+📋  Custom         — Your team's rules from prguard.yml
+```
+
+---
+
+## ⚙️ Custom Rules (`prguard.yml`)
+
+Add a `prguard.yml` file to your repo root to define team-specific standards:
+
+```yaml
+rules:
+  - "All functions must have docstrings"
+  - "No print() statements allowed in production code"
+  - "All HTTP calls must have timeout set explicitly"
+  - "Database calls must use transactions"
+threshold: 8
+```
+
+PRGuard will enforce these rules on every PR in addition to the standard checks.
+
+---
+
+## 💬 PR Chat
+
+Comment `/prguard <question>` on any PR to ask the bot anything:
+
+```
+/prguard what is the most critical issue to fix first?
+/prguard how do I fix the complexity issue in main.py?
+/prguard why did this PR fail the quality gate?
+```
+
+The bot will reply with a detailed, context-aware answer based on the review.
+
+---
+
+## 🏗️ Architecture
 
 ```
 GitHub PR Event
       │
       ▼
-POST /webhook/github          ← FastAPI (signature verified)
-      │
-      ├── get_pr_diff()       ← GitHub REST API (unified diff)
-      │
-      ├── review_pr()         ← OpenAI GPT-4o (structured JSON response)
-      │
-      ├── post_pr_comment()   ← GitHub Issues API (formatted markdown)
-      │
-      └── set_commit_status() ← GitHub Statuses API (pass/fail gate)
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Webhook   │────▶│  FastAPI App │────▶│  Groq API   │
+│  (GitHub)   │     │  (Railway)   │     │ LLaMA 3.3   │
+└─────────────┘     └──────┬───────┘     └─────────────┘
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │ Inline   │ │ Auto-Fix │ │Dashboard │
+        │ Comments │ │ Branch   │ │(Postgres)│
+        └──────────┘ └──────────┘ └──────────┘
 ```
 
-## Folder Structure
+### File Structure
 
 ```
-pr-reviewer/
+PRGuard/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py           # FastAPI app, webhook handler, orchestration
-│   ├── config.py         # Settings from environment
-│   ├── models.py         # Pydantic models (PRContext, ReviewResult, CodeIssue)
-│   ├── github_client.py  # GitHub REST API: diff fetch, comment, status
-│   ├── ai_reviewer.py    # OpenAI prompt + response parser + mock
-│   └── formatter.py      # Markdown comment builder
-├── test_local.py         # Local integration tests (no real tokens needed)
-├── requirements.txt
-├── .env.example
-└── README.md
+│   ├── main.py           # FastAPI app & webhook handler
+│   ├── ai_reviewer.py    # Groq review + retry logic
+│   ├── auto_fixer.py     # AI fix branch creator
+│   ├── github_client.py  # GitHub API wrapper
+│   ├── formatter.py      # PR comment formatting
+│   ├── database.py       # PostgreSQL storage
+│   ├── dashboard.html    # Mission Control UI
+│   ├── home.html         # Landing page
+│   ├── rules.py          # prguard.yml parser
+│   ├── chat.py           # /prguard chat handler
+│   ├── models.py         # Pydantic models
+│   └── config.py         # Settings & env vars
+├── prguard.yml           # Custom rules (example)
+├── Procfile              # Railway start command
+└── requirements.txt
 ```
 
-## Setup
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- GitHub account
+- [Groq API key](https://console.groq.com) (free)
+- [ngrok](https://ngrok.com) for local development (or deploy to Railway)
+
+### 1. Clone & Install
 
 ```bash
-git clone <this-repo>
-cd pr-reviewer
-
-python -m venv venv && source venv/bin/activate
+git clone https://github.com/AtharvaVavhal/PRGuard.git
+cd PRGuard
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-
-cp .env.example .env
-# Edit .env and fill in your tokens
 ```
 
-## GitHub Token Permissions
+### 2. Set Environment Variables
 
-Create a **fine-grained PAT** at https://github.com/settings/tokens with:
-- `contents: read`
-- `pull-requests: write`  ← for posting comments
-- `commit-statuses: write`  ← for setting pass/fail status
+Create a `.env` file:
 
-## Run Locally
+```env
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_WEBHOOK_SECRET=your_webhook_secret
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+PASS_SCORE_THRESHOLD=7
+LOG_LEVEL=INFO
+DATABASE_URL=postgresql://...   # For PostgreSQL (Railway provides this)
+```
+
+### 3. Run Locally
 
 ```bash
-# With real OpenAI
-uvicorn app.main:app --reload --port 8000
-
-# With mock AI (no OpenAI key needed)
-USE_MOCK_AI=true uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --port 8000
 ```
 
-Health check: http://localhost:8000/health
+### 4. Set Up GitHub Webhook
 
-## Local Tests (no tokens needed)
+- Go to your repo → **Settings → Webhooks → Add webhook**
+- **Payload URL:** `https://your-ngrok-url/webhook/github`
+- **Content type:** `application/json`
+- **Events:** Select `Pull requests` and `Issue comments`
+- Add your webhook secret
 
-```bash
-USE_MOCK_AI=true python test_local.py
+### 5. Add Custom Rules (Optional)
+
+Create `prguard.yml` in your repo root:
+
+```yaml
+rules:
+  - "All functions must have docstrings"
+  - "No hardcoded API keys"
+threshold: 7
 ```
 
-## End-to-End Testing with ngrok
+---
 
-### 1. Start your server
-```bash
-USE_MOCK_AI=true uvicorn app.main:app --port 8000
-```
+## ☁️ Deploy to Railway
 
-### 2. Expose it with ngrok
-```bash
-# Install: https://ngrok.com/download
-ngrok http 8000
-# Copy the https URL, e.g. https://abc123.ngrok-free.app
-```
+1. Fork this repo
+2. Go to [railway.app](https://railway.app) → **New Project → Deploy from GitHub**
+3. Add **PostgreSQL** database to your project
+4. Set environment variables in the **Variables** tab
+5. Railway auto-deploys on every push
 
-### 3. Configure GitHub Webhook
-Go to: `https://github.com/<owner>/<repo>/settings/hooks/new`
+Your public URL will be: `https://your-app.up.railway.app`
 
-| Field | Value |
-|-------|-------|
-| Payload URL | `https://abc123.ngrok-free.app/webhook/github` |
-| Content type | `application/json` |
-| Secret | Your `GITHUB_WEBHOOK_SECRET` value |
-| Events | Select **"Pull requests"** only |
+Update your GitHub webhook URL to point to Railway.
 
-### 4. Open a PR
-Create or update a PR in your repo. Within seconds you should see:
-- A comment posted on the PR with the score and issues
-- A status check (✅ or ❌) on the commit
+---
 
-### 5. Require the status check (enforce the gate)
-Go to: `Settings → Branches → Branch protection rules → main`
-- Enable: **"Require status checks to pass before merging"**
-- Search for: `pr-reviewer/quality`
-- Enable: **"Require branches to be up to date before merging"**
+## 🔧 Tech Stack
 
-Now PRs with score < 7 literally cannot be merged.
+| Layer | Technology |
+|---|---|
+| **API Framework** | FastAPI + Uvicorn |
+| **AI Model** | LLaMA 3.3 70B via Groq |
+| **GitHub Integration** | GitHub REST API v3 |
+| **Database** | PostgreSQL (Railway) |
+| **HTTP Client** | httpx |
+| **Config Parsing** | PyYAML |
+| **Deployment** | Railway |
+| **Language** | Python 3.11 |
 
-## Tuning
+---
 
-| Config | Default | Description |
-|--------|---------|-------------|
-| `PASS_SCORE_THRESHOLD` | 7 | Minimum score to pass |
-| `OPENAI_MODEL` | gpt-4o | Swap to gpt-4o-mini for lower cost |
-| `USE_MOCK_AI` | false | Skip OpenAI for local testing |
+## 📊 How Scoring Works
 
-## Adding More Review Categories
+| Score | Grade | Meaning |
+|---|---|---|
+| 9–10 | ⭐ Excellent | Near-perfect. Ready to merge. |
+| 7–8  | ✅ Good | Acceptable for production. Minor issues only. |
+| 5–6  | ⚠️ Borderline | Real problems that need fixing. |
+| 3–4  | ❌ Poor | Multiple critical issues. Do not merge. |
+| 0–2  | 🚨 Unacceptable | Rewrite required. |
 
-Edit the `SYSTEM_PROMPT` in `app/ai_reviewer.py`. Add entries to the `WHAT YOU MUST FLAG` section and the `category` enum in `models.py`.
+Multiple HIGH severity issues cannot score above 6.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how:
+
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'add my feature'`
+4. Push to the branch: `git push origin feature/my-feature`
+5. Open a Pull Request — PRGuard will review it automatically! 🤖
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+Built with ❤️ · Powered by **Groq + LLaMA 3.3** · Deployed on **Railway**
+
+⭐ **Star this repo if PRGuard saved your codebase!**
+
+[Live Demo](https://prguard-production-eae8.up.railway.app) · [Report Bug](https://github.com/AtharvaVavhal/PRGuard/issues) · [Request Feature](https://github.com/AtharvaVavhal/PRGuard/issues)
+
+</div>
