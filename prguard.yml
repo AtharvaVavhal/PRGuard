@@ -1,0 +1,5 @@
+rules:
+  - "All functions must have docstrings"
+  - "No print() statements allowed in production code"
+  - "All HTTP calls must have timeout set explicitly"
+threshold: 8
