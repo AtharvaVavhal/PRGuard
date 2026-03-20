@@ -20,7 +20,14 @@ def _headers():
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(headers=_headers(), timeout=30)
+    try:
+        return httpx.Client(headers=_headers(), timeout=30)
+    except httpx.NetworkError as e:
+        logger.error("I/O error occurred while creating client: %s", e)
+        raise
+    except Exception as e:
+        logger.error("An error occurred while creating client: %s", e)
+        raise
 
 
 # -------------------- PR DATA --------------------
