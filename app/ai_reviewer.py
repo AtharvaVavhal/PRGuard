@@ -3,15 +3,14 @@ import logging
 import os
 from typing import Optional
 
-from google import genai
-from google.genai import types
+from groq import Groq
 
 from app.config import settings
 from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
+client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -69,27 +68,18 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
 
-    logger.info("Sending diff to Gemini for review (diff_len=%d)", len(diff))
+    logger.info("Sending diff to Groq for review (diff_len=%d)", len(diff))
 
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=_build_prompt(pr_title, diff),
-        config=types.GenerateContentConfig(
-            temperature=0.1,
-            response_mime_type="application/json",
-        ),
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": _build_prompt(pr_title, diff)}],
+        temperature=0.1,
+        response_format={"type": "json_object"},
     )
 
-    raw = response.text.strip()
+    raw = response.choices[0].message.content.strip()
 
-    # Strip markdown fences if model adds them despite mime type
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
-    logger.debug("Raw Gemini response: %s", raw[:500])
+    logger.debug("Raw Groq response: %s", raw[:500])
     data = json.loads(raw)
 
     issues = [
@@ -127,27 +117,11 @@ def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) ->
             description="Function `process` is 45 lines long and handles both validation and DB writes. Split into two functions.",
             suggested_fix="Extract DB logic into `_persist_record(data)` and keep `process()` as orchestrator only.",
         ),
-        CodeIssue(
-            file="src/utils.py",
-            line_range="L3",
-            category="naming",
-            severity=Severity.MEDIUM,
-            description="Variable `d` is used as the main data dictionary. Name conveys no meaning.",
-            suggested_fix="Rename `d` to `user_payload` or `request_data` depending on context.",
-        ),
-        CodeIssue(
-            file="src/handler.py",
-            line_range="L30",
-            category="error_handling",
-            severity=Severity.HIGH,
-            description="`requests.post()` call has no try/except. A network failure will crash the worker.",
-            suggested_fix="Wrap in try/except requests.RequestException and log + return error response.",
-        ),
     ]
     score = 4.5
     return ReviewResult(
         score=score,
-        summary="This PR has structural and reliability problems. Two HIGH severity issues must be resolved before merge.",
+        summary="This PR has structural and reliability problems.",
         issues=issues,
         passed=score >= threshold,
     )
