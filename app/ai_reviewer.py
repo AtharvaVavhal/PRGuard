@@ -9,7 +9,7 @@ from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = Groq(api_key=settings.GROQ_API_KEY)
+groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -63,13 +63,10 @@ def _build_prompt(pr_title: str, diff: str) -> str:
     return f"PR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
 
 
-def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
-    if threshold is None:
-        threshold = settings.PASS_SCORE_THRESHOLD
-
+def send_diff_to_groq(pr_title: str, diff: str) -> dict:
     logger.info("Sending diff to Groq for review (diff_len=%d)", len(diff))
 
-    response = client.chat.completions.create(
+    response = groq_client.chat.completions.create(
         model=settings.GROQ_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -82,7 +79,12 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
     raw = response.choices[0].message.content.strip()
 
     logger.debug("Raw Groq response: %s", raw[:500])
-    data = json.loads(raw)
+    return json.loads(raw)
+
+
+def parse_groq_response(response: dict, threshold: Optional[int] = None) -> ReviewResult:
+    if threshold is None:
+        threshold = settings.PASS_SCORE_THRESHOLD
 
     issues = [
         CodeIssue(
@@ -93,18 +95,23 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
             description=i["description"],
             suggested_fix=i["suggested_fix"],
         )
-        for i in data.get("issues", [])
+        for i in response.get("issues", [])
     ]
 
     result = ReviewResult(
-        score=float(data["score"]),
-        summary=data["summary"],
+        score=float(response["score"]),
+        summary=response["summary"],
         issues=issues,
-        passed=float(data["score"]) >= threshold,
+        passed=float(response["score"]) >= threshold,
     )
 
     logger.info("Review complete: score=%.1f passed=%s issues=%d", result.score, result.passed, len(result.issues))
     return result
+
+
+def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
+    response = send_diff_to_groq(pr_title, diff)
+    return parse_groq_response(response, threshold)
 
 
 def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
