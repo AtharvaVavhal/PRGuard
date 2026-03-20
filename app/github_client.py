@@ -23,10 +23,31 @@ def _client() -> httpx.Client:
     return httpx.Client(headers=_headers(), timeout=30)
 
 
+def post_inline_comment(repo: str, pr_number: int, body: str, commit_id: str, path: str, line: int):
+    url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}/comments"
+
+    payload = {
+        "body": body,
+        "commit_id": commit_id,
+        "path": path,
+        "line": line,
+        "side": "RIGHT"
+    }
+
+    with _client() as client:
+        resp = client.post(url, json=payload)
+
+        try:
+            resp.raise_for_status()
+            logger.info("Inline comment posted on %s:%d", path, line)
+        except httpx.HTTPStatusError:
+            logger.error("Inline comment failed: %s", resp.text)
+            raise
+
+
 def get_pr_diff(repo: str, pr_number: int) -> str:
-    """Fetch the unified diff for a pull request."""
     url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}"
-    
+
     with _client() as client:
         resp = client.get(
             url,
@@ -40,7 +61,6 @@ def get_pr_diff(repo: str, pr_number: int) -> str:
 
 
 def get_pr_metadata(repo: str, pr_number: int) -> dict:
-    """Fetch PR title, head SHA, and metadata."""
     url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}"
 
     with _client() as client:
@@ -56,38 +76,36 @@ def get_pr_metadata(repo: str, pr_number: int) -> dict:
 
 
 def post_pr_comment(repo: str, pr_number: int, body: str) -> None:
-    """Post a comment on the pull request."""
     url = f"{BASE_URL}/repos/{repo}/issues/{pr_number}/comments"
 
     with _client() as client:
         resp = client.post(url, json={"body": body})
 
-        # Debug (remove later)
-        print("STATUS:", resp.status_code)
-        print("RESPONSE:", resp.text)
+        try:
+            resp.raise_for_status()
+            logger.info("Posted summary comment on %s#%d", repo, pr_number)
+        except httpx.HTTPStatusError:
+            logger.error("Summary comment failed: %s", resp.text)
+            raise
 
-        resp.raise_for_status()
-        logger.info("Posted comment on %s#%d", repo, pr_number)
 
-
-def set_commit_status(
-    repo: str,
-    sha: str,
-    state: str,
-    description: str,
-    context: str = "pr-reviewer/quality",
-) -> None:
-    """Set GitHub commit status."""
-    url = f"{BASE_URL}/repos/{repo}/statuses/{sha}"
+def create_check_run(repo: str, sha: str, name: str, status: str, conclusion: str | None, output: dict):
+    url = f"https://api.github.com/repos/{repo}/check-runs"
 
     payload = {
-        "state": state,
-        "description": description[:140],
-        "context": context,
+        "name": name,
+        "head_sha": sha,
+        "status": status,  # queued, in_progress, completed
+        "conclusion": conclusion,  # success, failure, neutral
+        "output": output,
     }
 
     with _client() as client:
         resp = client.post(url, json=payload)
-        resp.raise_for_status()
 
-        logger.info("Set commit status '%s' on %s@%s", state, repo, sha[:7])
+        try:
+            resp.raise_for_status()
+            logger.info("Created check run '%s' on %s@%s", name, repo, sha[:7])
+        except httpx.HTTPStatusError:
+            logger.error("Check run creation failed: %s", resp.text)
+            raise
