@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PRGuard — AI Code Quality Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #020407;
+  --neon:  #00ff88;
+  --blue:  #0ea5e9;
+  --text:  #c8e6f0;
+  --muted: #2d5a6e;
+  --s1:    #060d12;
+  --border: #0f2030;
+  --mono:  'Space Mono', monospace;
+  --display: 'Orbitron', monospace;
+  --body:  'DM Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* Grid bg */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.35;
+  z-index: 0;
+}
+
+/* Scanlines */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 999;
+}
+
+.wrap { position: relative; z-index: 1; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: rgba(2,4,7,0.9);
+  backdrop-filter: blur(12px);
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--neon);
+  text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-logo span { font-size: 20px; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.nav-links a {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--neon); }
+
+.nav-btn {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 8px 20px;
+  border: 1px solid var(--neon);
+  border-radius: 4px;
+  color: var(--neon) !important;
+  text-decoration: none;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.nav-btn:hover {
+  background: rgba(0,255,136,0.08) !important;
+  box-shadow: 0 0 16px rgba(0,255,136,0.2);
+  color: var(--neon) !important;
+}
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 40px 80px;
+  position: relative;
+}
+
+.hero-glow {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 32px;
+  animation: fade-up 0.6s both;
+}
+
+.hero-badge .dot {
+  width: 5px; height: 5px;
+  background: var(--neon);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--neon);
+  animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+  0%,100% { opacity:1; } 50% { opacity:0.2; }
+}
+
+.hero-title {
+  font-family: var(--display);
+  font-size: clamp(48px, 8vw, 96px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  margin-bottom: 24px;
+  animation: fade-up 0.6s 0.1s both;
+}
+
+.hero-title .line1 { color: var(--text); display: block; }
+.hero-title .line2 {
+  color: var(--neon);
+  display: block;
+  text-shadow: 0 0 40px rgba(0,255,136,0.4);
+}
+
+.hero-sub {
+  font-size: 18px;
+  font-weight: 300;
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto 48px;
+  line-height: 1.7;
+  animation: fade-up 0.6s 0.2s both;
+}
+
+.hero-sub em { color: var(--text); font-style: normal; font-weight: 500; }
+
+.hero-cta {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fade-up 0.6s 0.3s both;
+}
+
+.btn-primary {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 14px 32px;
+  background: var(--neon);
+  color: var(--bg);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 32px rgba(0,255,136,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 14px 32px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-secondary:hover { border-color: var(--neon); color: var(--neon); }
+
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* FEATURES */
+.features {
+  padding: 100px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--neon);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-label::before { content: '// '; }
+
+.section-title {
+  font-family: var(--display);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 64px;
+  color: var(--text);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.feature {
+  background: var(--s1);
+  padding: 32px;
+  transition: background 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature:hover { background: #070f18; }
+
+.feature::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 2px; height: 0;
+  background: var(--neon);
+  transition: height 0.3s;
+}
+
+.feature:hover::before { height: 100%; }
+
+.feature-icon {
+  font-size: 28px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.feature-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--neon);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.feature-desc {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* HOW IT WORKS */
+.how {
+  padding: 100px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0;
+  position: relative;
+}
+
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 28px; left: 28px; right: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--neon), var(--blue), var(--neon));
+  opacity: 0.3;
+}
+
+.step {
+  padding: 0 24px 24px;
+  position: relative;
+}
+
+.step-num {
+  width: 56px; height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--neon);
+  background: var(--bg);
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.step:hover .step-num {
+  border-color: var(--neon);
+  box-shadow: 0 0 16px rgba(0,255,136,0.3);
+}
+
+.step-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.step-desc {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 40px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+footer span { color: var(--neon); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo"><span>🛡️</span> PRGUARD</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how">How It Works</a>
+      <a href="/dashboard" class="nav-btn">Dashboard →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div>
+    <div class="hero-badge"><div class="dot"></div>AI-POWERED · GITHUB NATIVE · OPEN SOURCE</div>
+    <h1 class="hero-title">
+      <span class="line1">Your Code's</span>
+      <span class="line2">Last Line of Defense</span>
+    </h1>
+    <p class="hero-sub">
+      PRGuard reviews every Pull Request with <em>LLaMA 3.3</em>, posts inline comments,
+      auto-fixes issues, and blocks bad code from reaching production.
+    </p>
+    <div class="hero-cta">
+      <a href="/dashboard" class="btn-primary">VIEW DASHBOARD</a>
+      <a href="https://github.com/AtharvaVavhal/PRGuard" target="_blank" class="btn-secondary">VIEW SOURCE</a>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">Capabilities</div>
+  <div class="section-title">Everything your team needs<br>to ship clean code.</div>
+  <div class="features-grid">
+    <div class="feature">
+      <span class="feature-icon">🤖</span>
+      <div class="feature-title">AI Code Review</div>
+      <div class="feature-desc">Scores every PR 0–10 across 8 categories including naming, complexity, security, and dead code.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div class="feature-title">Inline Comments</div>
+      <div class="feature-desc">Issues are posted directly on the affected line in the diff — no digging through reports.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🔥</span>
+      <div class="feature-title">Auto-Fix Branch</div>
+      <div class="feature-desc">When a PR fails, PRGuard creates a fix branch with AI-applied corrections automatically.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">Team Dashboard</div>
+      <div class="feature-desc">Live dashboard tracking score trends, pass rates, and issue categories across all repos.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">⚙️</span>
+      <div class="feature-title">Custom Rules</div>
+      <div class="feature-desc">Add a <code style="color:var(--neon);font-size:12px">prguard.yml</code> to your repo to define team-specific coding standards.</div>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">💬</span>
+      <div class="feature-title">PR Chat</div>
+      <div class="feature-desc">Comment <code style="color:var(--neon);font-size:12px">/prguard &lt;question&gt;</code> to ask the bot anything about your review.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-label">Workflow</div>
+  <div class="section-title">From PR to review<br>in seconds.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">PR Opened</div>
+      <div class="step-desc">Developer opens or pushes to a Pull Request on GitHub.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Diff Fetched</div>
+      <div class="step-desc">PRGuard fetches the diff and your team's custom rules from <code style="color:var(--neon)">prguard.yml</code>.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">AI Reviews</div>
+      <div class="step-desc">LLaMA 3.3 reviews the code and generates a score with detailed issues.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">Comments Posted</div>
+      <div class="step-desc">Inline comments and a summary are posted directly on the PR.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">05</div>
+      <div class="step-title">Auto-Fixed</div>
+      <div class="step-desc">If score is below threshold, a fix branch is created automatically.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">06</div>
+      <div class="step-title">Gate Set</div>
+      <div class="step-desc">Commit status is set to ✅ or ❌ blocking or allowing the merge.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Built with ❤️ · Powered by <span>Groq + LLaMA 3.3</span> · <span>PRGuard</span>
+</footer>
+
+</div>
+</body>
+</html>

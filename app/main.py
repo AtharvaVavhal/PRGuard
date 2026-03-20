@@ -12,16 +12,12 @@ from app.config import settings
 from app.models import PRContext
 from app import github_client, formatter, auto_fixer, database, rules as repo_rules, chat
 
-# Use real or mock reviewer based on env flag
 USE_MOCK = os.getenv("USE_MOCK_AI", "false").lower() == "true"
 if USE_MOCK:
     from app.ai_reviewer import mock_review_pr as review_pr
 else:
     from app.ai_reviewer import review_pr
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
 logging.basicConfig(
     level=settings.LOG_LEVEL,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -29,12 +25,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 DASHBOARD_HTML = Path(__file__).parent / "dashboard.html"
-CHAT_TRIGGER = "/prguard"
+HOME_HTML      = Path(__file__).parent / "home.html"
+CHAT_TRIGGER   = "/prguard"
 
 
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     database.init_db()
@@ -43,12 +37,9 @@ async def lifespan(app: FastAPI):
     logger.info("PR Reviewer shutting down")
 
 
-app = FastAPI(title="PR Reviewer", lifespan=lifespan)
+app = FastAPI(title="PRGuard", lifespan=lifespan)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 def extract_line(line_range: str | None) -> int:
     if not line_range:
         return 1
@@ -58,9 +49,6 @@ def extract_line(line_range: str | None) -> int:
         return 1
 
 
-# ---------------------------------------------------------------------------
-# Webhook signature verification
-# ---------------------------------------------------------------------------
 def _verify_signature(payload: bytes, signature_header: str | None) -> bool:
     if not settings.GITHUB_WEBHOOK_SECRET:
         logger.warning("No GITHUB_WEBHOOK_SECRET set — skipping signature check")
@@ -75,40 +63,26 @@ def _verify_signature(payload: bytes, signature_header: str | None) -> bool:
     return hmac.compare_digest(expected, signature_header)
 
 
-# ---------------------------------------------------------------------------
-# Core review pipeline
-# ---------------------------------------------------------------------------
 def _run_review(ctx: PRContext) -> None:
     logger.info("Starting review for %s#%d", ctx.repo_full_name, ctx.pr_number)
 
     github_client.set_commit_status(
-        ctx.repo_full_name,
-        ctx.head_sha,
-        state="pending",
-        description="PR review in progress…",
+        ctx.repo_full_name, ctx.head_sha,
+        state="pending", description="PR review in progress…",
     )
 
     try:
-        # Fetch custom rules
-        repo_config = repo_rules.fetch_repo_rules(ctx.repo_full_name, ctx.head_sha)
+        repo_config  = repo_rules.fetch_repo_rules(ctx.repo_full_name, ctx.head_sha)
         custom_rules = repo_config["rules"]
-        threshold = repo_config["threshold"] or settings.PASS_SCORE_THRESHOLD
+        threshold    = repo_config["threshold"] or settings.PASS_SCORE_THRESHOLD
 
         if custom_rules:
             logger.info("Applying %d custom rules from prguard.yml", len(custom_rules))
 
-        # AI review
-        result = review_pr(
-            ctx.pr_title,
-            ctx.diff,
-            threshold=threshold,
-            custom_rules=custom_rules,
-        )
+        result = review_pr(ctx.pr_title, ctx.diff, threshold=threshold, custom_rules=custom_rules)
 
-        # Inline comments
         for issue in result.issues:
             try:
-                line = extract_line(issue.line_range)
                 github_client.post_inline_comment(
                     repo=ctx.repo_full_name,
                     pr_number=ctx.pr_number,
@@ -118,16 +92,14 @@ def _run_review(ctx: PRContext) -> None:
                     ),
                     commit_id=ctx.head_sha,
                     path=issue.file,
-                    line=line,
+                    line=extract_line(issue.line_range),
                 )
             except Exception as e:
                 logger.warning("Inline comment failed: %s", e)
 
-        # Summary comment
         comment = formatter.build_comment(result, threshold=threshold)
         github_client.post_pr_comment(ctx.repo_full_name, ctx.pr_number, comment)
 
-        # Auto-fix
         fix_branch = None
         if not result.passed:
             logger.info("PR failed review, running auto-fixer...")
@@ -138,23 +110,16 @@ def _run_review(ctx: PRContext) -> None:
                 base_branch=ctx.base_branch,
                 result=result,
             )
-
             if fix_branch:
-                fix_comment = (
+                github_client.post_pr_comment(
+                    ctx.repo_full_name, ctx.pr_number,
                     f"🤖 **PRGuard Auto-Fix**\n\n"
-                    f"I've created a fix branch with suggested corrections:\n\n"
-                    f"**Branch:** `{fix_branch}`\n\n"
-                    f"To review and apply the fixes:\n"
-                    f"```bash\n"
-                    f"git fetch origin {fix_branch}\n"
-                    f"git checkout {fix_branch}\n"
-                    f"```\n\n"
+                    f"Fix branch created: `{fix_branch}`\n\n"
+                    f"```bash\ngit fetch origin {fix_branch}\ngit checkout {fix_branch}\n```\n\n"
                     f"> ⚠️ Always review AI-generated fixes before merging.\n\n"
-                    f"💬 Have questions about this review? Comment `/prguard <your question>` and I'll answer!"
+                    f"💬 Questions? Comment `/prguard <your question>`"
                 )
-                github_client.post_pr_comment(ctx.repo_full_name, ctx.pr_number, fix_comment)
 
-        # Save to DB
         database.save_review(
             repo=ctx.repo_full_name,
             pr_number=ctx.pr_number,
@@ -165,18 +130,15 @@ def _run_review(ctx: PRContext) -> None:
             fix_branch=fix_branch,
         )
 
-        # Final status
         if result.passed:
             github_client.set_commit_status(
-                ctx.repo_full_name,
-                ctx.head_sha,
+                ctx.repo_full_name, ctx.head_sha,
                 state="success",
                 description=f"Quality score {result.score:.1f}/10 — passed ✅",
             )
         else:
             github_client.set_commit_status(
-                ctx.repo_full_name,
-                ctx.head_sha,
+                ctx.repo_full_name, ctx.head_sha,
                 state="failure",
                 description=f"Quality score {result.score:.1f}/10 — below threshold of {threshold} ❌",
             )
@@ -186,32 +148,21 @@ def _run_review(ctx: PRContext) -> None:
     except Exception as exc:
         logger.exception("Review pipeline failed: %s", exc)
         github_client.set_commit_status(
-            ctx.repo_full_name,
-            ctx.head_sha,
-            state="error",
-            description="PR reviewer encountered an internal error",
+            ctx.repo_full_name, ctx.head_sha,
+            state="error", description="PR reviewer encountered an internal error",
         )
         raise
 
 
-# ---------------------------------------------------------------------------
-# Chat pipeline
-# ---------------------------------------------------------------------------
 def _run_chat(repo: str, pr_number: int, question: str) -> None:
     logger.info("Chat question on %s#%d: %s", repo, pr_number, question[:80])
-
-    # Load the latest review for this PR from DB
     review = database.get_latest_review(repo, pr_number)
 
     if not review:
-        reply = (
-            "🤖 **PRGuard**\n\n"
-            "I don't have a review on record for this PR yet. "
-            "Please wait for the review to complete or push a new commit to trigger one."
-        )
+        reply = "🤖 **PRGuard**\n\nNo review on record for this PR yet. Push a commit to trigger one."
     else:
         answer = chat.answer_question(question, review)
-        reply = f"🤖 **PRGuard**\n\n{answer}"
+        reply  = f"🤖 **PRGuard**\n\n{answer}"
 
     try:
         github_client.post_pr_comment(repo, pr_number, reply)
@@ -220,34 +171,27 @@ def _run_chat(repo: str, pr_number: int, question: str) -> None:
         logger.error("Failed to post chat reply: %s", exc)
 
 
-# ---------------------------------------------------------------------------
-# Webhook endpoint
-# ---------------------------------------------------------------------------
 @app.post("/webhook/github")
 async def github_webhook(request: Request, background_tasks: BackgroundTasks):
     payload_bytes = await request.body()
-
     sig = request.headers.get("X-Hub-Signature-256")
     if not _verify_signature(payload_bytes, sig):
-        logger.warning("Invalid webhook signature — rejecting request")
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     event = request.headers.get("X-GitHub-Event", "")
 
-    # ---- PR review trigger ----
     if event == "pull_request":
         payload = await request.json()
-        action = payload.get("action", "")
-
+        action  = payload.get("action", "")
         if action not in ("opened", "synchronize", "reopened"):
             return JSONResponse({"status": "ignored", "action": action})
 
-        pr = payload["pull_request"]
-        repo = payload["repository"]["full_name"]
-        pr_number = pr["number"]
-        head_sha = pr["head"]["sha"]
-        pr_title = pr["title"]
-        base_branch = pr["base"]["ref"]
+        pr           = payload["pull_request"]
+        repo         = payload["repository"]["full_name"]
+        pr_number    = pr["number"]
+        head_sha     = pr["head"]["sha"]
+        pr_title     = pr["title"]
+        base_branch  = pr["base"]["ref"]
 
         logger.info("Received PR event: %s action=%s pr=#%d", repo, action, pr_number)
 
@@ -261,43 +205,28 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
             return JSONResponse({"status": "skipped", "reason": "empty diff"})
 
         ctx = PRContext(
-            repo_full_name=repo,
-            pr_number=pr_number,
-            pr_title=pr_title,
-            head_sha=head_sha,
-            base_branch=base_branch,
-            diff=diff,
+            repo_full_name=repo, pr_number=pr_number, pr_title=pr_title,
+            head_sha=head_sha, base_branch=base_branch, diff=diff,
         )
-
         background_tasks.add_task(_run_review, ctx)
         return JSONResponse({"status": "accepted", "pr": pr_number})
 
-    # ---- Chat trigger ----
     if event == "issue_comment":
         payload = await request.json()
-        action = payload.get("action", "")
-
-        # Only handle new comments on PRs
-        if action != "created":
-            return JSONResponse({"status": "ignored", "action": action})
-
+        if payload.get("action") != "created":
+            return JSONResponse({"status": "ignored"})
         issue = payload.get("issue", {})
         if "pull_request" not in issue:
-            return JSONResponse({"status": "ignored", "reason": "not a PR comment"})
+            return JSONResponse({"status": "ignored", "reason": "not a PR"})
 
-        comment_body = payload.get("comment", {}).get("body", "").strip()
+        body      = payload.get("comment", {}).get("body", "").strip()
         commenter = payload.get("comment", {}).get("user", {}).get("login", "")
 
-        # Ignore comments not starting with /prguard
-        if not comment_body.lower().startswith(CHAT_TRIGGER):
-            return JSONResponse({"status": "ignored", "reason": "not a prguard command"})
+        if not body.lower().startswith(CHAT_TRIGGER):
+            return JSONResponse({"status": "ignored"})
 
-        # Extract question (everything after /prguard)
-        question = comment_body[len(CHAT_TRIGGER):].strip()
-        if not question:
-            question = "What are the main issues with this PR and how do I fix them?"
-
-        repo = payload["repository"]["full_name"]
+        question  = body[len(CHAT_TRIGGER):].strip() or "What are the main issues and how do I fix them?"
+        repo      = payload["repository"]["full_name"]
         pr_number = issue["number"]
 
         logger.info("Chat trigger from @%s on %s#%d", commenter, repo, pr_number)
@@ -307,9 +236,12 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
     return JSONResponse({"status": "ignored", "event": event})
 
 
-# ---------------------------------------------------------------------------
-# Dashboard
-# ---------------------------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+@app.get("/home", response_class=HTMLResponse)
+def home():
+    return HTMLResponse(content=HOME_HTML.read_text(), status_code=200)
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
     return HTMLResponse(content=DASHBOARD_HTML.read_text(), status_code=200)
@@ -320,13 +252,6 @@ def api_stats():
     return JSONResponse(database.get_stats())
 
 
-# ---------------------------------------------------------------------------
-# Health
-# ---------------------------------------------------------------------------
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "threshold": settings.PASS_SCORE_THRESHOLD,
-        "mock_ai": USE_MOCK,
-    }
+    return {"status": "ok", "threshold": settings.PASS_SCORE_THRESHOLD, "mock_ai": USE_MOCK}
