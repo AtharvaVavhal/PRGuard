@@ -8,15 +8,19 @@ BASE_URL = "https://api.github.com"
 
 
 def _headers():
-    token = settings.GITHUB_TOKEN
-    if not token:
-        raise ValueError("GITHUB_TOKEN is missing")
+    try:
+        token = settings.GITHUB_TOKEN
+        if not token:
+            raise ValueError("GITHUB_TOKEN is missing")
 
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
+        return {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+    except Exception as e:
+        logger.error(f"Error getting headers: {e}")
+        raise
 
 
 def _client() -> httpx.Client:
