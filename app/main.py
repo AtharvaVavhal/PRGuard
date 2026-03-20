@@ -27,7 +27,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
@@ -37,20 +36,21 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("PR Reviewer shutting down")
 
-
 app = FastAPI(title="PR Reviewer", lifespan=lifespan)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+DEFAULT_LINE_NUMBER = 1
+
 def extract_line(line_range: str | None) -> int:
     if not line_range:
-        return 1
+        return DEFAULT_LINE_NUMBER
     try:
         return int(line_range.replace("L", "").split("-")[0])
     except:
-        return 1
+        return DEFAULT_LINE_NUMBER
 
 
 # ---------------------------------------------------------------------------
