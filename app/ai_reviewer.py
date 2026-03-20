@@ -9,7 +9,7 @@ from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = Groq(api_key=settings.GROQ_API_KEY)
+groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -55,25 +55,32 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
 }"""
 
 
-def _build_prompt(pr_title: str, diff: str, custom_rules: list[str]) -> str:
-    MAX_DIFF_CHARS = 12_000
-    truncated = diff[:MAX_DIFF_CHARS]
-    if len(diff) > MAX_DIFF_CHARS:
-        truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
-
-    custom_section = ""
+def _build_custom_section(custom_rules: list[str]) -> str:
     if custom_rules:
         formatted = "\n".join(f"- {rule}" for rule in custom_rules)
-        custom_section = (
+        return (
             f"\n\nCUSTOM RULES FOR THIS REPO (enforce these in addition to the standard rules above):\n"
             f"{formatted}\n"
             f"Flag any violation of these custom rules as category 'custom' with appropriate severity."
         )
+    return ""
 
+
+def _truncate_diff(diff: str) -> str:
+    MAX_DIFF_CHARS = 12_000
+    truncated = diff[:MAX_DIFF_CHARS]
+    if len(diff) > MAX_DIFF_CHARS:
+        truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
+    return truncated
+
+
+def _build_prompt(pr_title: str, diff: str, custom_rules: list[str]) -> str:
+    custom_section = _build_custom_section(custom_rules)
+    truncated_diff = _truncate_diff(diff)
     return (
         f"PR TITLE: {pr_title}"
         f"{custom_section}"
-        f"\n\nDIFF:\n{truncated}"
+        f"\n\nDIFF:\n{truncated_diff}"
         f"\n\nReturn only the JSON object."
     )
 
@@ -84,6 +91,18 @@ def review_pr(
     threshold: Optional[int] = None,
     custom_rules: Optional[list[str]] = None,
 ) -> ReviewResult:
+    """
+    Reviews a pull request based on the provided title, diff, and custom rules.
+
+    Args:
+    - pr_title (str): The title of the pull request.
+    - diff (str): The diff of the pull request.
+    - threshold (Optional[int]): The minimum score required for the pull request to pass. Defaults to settings.PASS_SCORE_THRESHOLD.
+    - custom_rules (Optional[list[str]]): A list of custom rules to enforce. Defaults to an empty list.
+
+    Returns:
+    - ReviewResult: An object containing the review result, including the score, summary, issues, and whether the pull request passed.
+    """
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
     if custom_rules is None:
@@ -94,7 +113,7 @@ def review_pr(
         len(diff), len(custom_rules)
     )
 
-    response = client.chat.completions.create(
+    response = groq_client.chat.completions.create(
         model=settings.GROQ_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
