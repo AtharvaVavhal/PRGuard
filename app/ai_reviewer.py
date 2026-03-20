@@ -9,7 +9,7 @@ from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = Groq(api_key=settings.GROQ_API_KEY)
+groq_client = Groq(api_key=settings.GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -55,12 +55,17 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
 }"""
 
 
-def _build_prompt(pr_title: str, diff: str) -> str:
-    MAX_DIFF_CHARS = 12_000
+MAX_DIFF_CHARS = 12_000
+
+def _truncate_diff(diff: str) -> str:
     truncated = diff[:MAX_DIFF_CHARS]
     if len(diff) > MAX_DIFF_CHARS:
         truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
-    return f"PR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
+    return truncated
+
+def _build_prompt(pr_title: str, diff: str) -> str:
+    truncated_diff = _truncate_diff(diff)
+    return f"PR TITLE: {pr_title}\n\nDIFF:\n{truncated_diff}\n\nReturn only the JSON object."
 
 
 def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
@@ -69,7 +74,7 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
 
     logger.info("Sending diff to Groq for review (diff_len=%d)", len(diff))
 
-    response = client.chat.completions.create(
+    response = groq_client.chat.completions.create(
         model=settings.GROQ_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
