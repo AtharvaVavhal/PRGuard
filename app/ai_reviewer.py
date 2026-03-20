@@ -46,7 +46,7 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
     {
       "file": "<filename>",
       "line_range": "<e.g. L12-L28 or null>",
-      "category": "<naming|complexity|duplication|error_handling|magic_values|security|type_safety|dead_code>",
+      "category": "<naming|complexity|duplication|error_handling|magic_values|security|type_safety|dead_code|custom>",
       "severity": "<low|medium|high>",
       "description": "<exact problem, no vagueness>",
       "suggested_fix": "<exact fix, with code snippet if needed>"
@@ -55,32 +55,56 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
 }"""
 
 
-def _build_prompt(pr_title: str, diff: str) -> str:
+def _build_prompt(pr_title: str, diff: str, custom_rules: list[str]) -> str:
     MAX_DIFF_CHARS = 12_000
     truncated = diff[:MAX_DIFF_CHARS]
     if len(diff) > MAX_DIFF_CHARS:
         truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
-    return f"PR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
+
+    custom_section = ""
+    if custom_rules:
+        formatted = "\n".join(f"- {rule}" for rule in custom_rules)
+        custom_section = (
+            f"\n\nCUSTOM RULES FOR THIS REPO (enforce these in addition to the standard rules above):\n"
+            f"{formatted}\n"
+            f"Flag any violation of these custom rules as category 'custom' with appropriate severity."
+        )
+
+    return (
+        f"PR TITLE: {pr_title}"
+        f"{custom_section}"
+        f"\n\nDIFF:\n{truncated}"
+        f"\n\nReturn only the JSON object."
+    )
 
 
-def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
+def review_pr(
+    pr_title: str,
+    diff: str,
+    threshold: Optional[int] = None,
+    custom_rules: Optional[list[str]] = None,
+) -> ReviewResult:
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
+    if custom_rules is None:
+        custom_rules = []
 
-    logger.info("Sending diff to Groq for review (diff_len=%d)", len(diff))
+    logger.info(
+        "Sending diff to Groq for review (diff_len=%d, custom_rules=%d)",
+        len(diff), len(custom_rules)
+    )
 
     response = client.chat.completions.create(
         model=settings.GROQ_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _build_prompt(pr_title, diff)},
+            {"role": "user", "content": _build_prompt(pr_title, diff, custom_rules)},
         ],
         temperature=0.1,
         response_format={"type": "json_object"},
     )
 
     raw = response.choices[0].message.content.strip()
-
     logger.debug("Raw Groq response: %s", raw[:500])
     data = json.loads(raw)
 
@@ -103,11 +127,19 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
         passed=float(data["score"]) >= threshold,
     )
 
-    logger.info("Review complete: score=%.1f passed=%s issues=%d", result.score, result.passed, len(result.issues))
+    logger.info(
+        "Review complete: score=%.1f passed=%s issues=%d",
+        result.score, result.passed, len(result.issues)
+    )
     return result
 
 
-def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
+def mock_review_pr(
+    pr_title: str,
+    diff: str,
+    threshold: Optional[int] = None,
+    custom_rules: Optional[list[str]] = None,
+) -> ReviewResult:
     if threshold is None:
         threshold = settings.PASS_SCORE_THRESHOLD
     issues = [

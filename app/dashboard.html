@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PRGuard Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  header .logo { font-size: 22px; font-weight: 700; color: #58a6ff; }
+  header .sub  { font-size: 13px; color: #8b949e; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .kpi {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+
+  .kpi .label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi .value { font-size: 36px; font-weight: 700; margin-top: 6px; }
+  .kpi .value.green  { color: #3fb950; }
+  .kpi .value.blue   { color: #58a6ff; }
+  .kpi .value.yellow { color: #d29922; }
+  .kpi .value.purple { color: #bc8cff; }
+
+  /* Charts row */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+
+  .card h3 { font-size: 14px; color: #8b949e; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; }
+
+  canvas { max-height: 220px; }
+
+  /* Repo table */
+  .repo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .repo-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+
+  .repo-card .name { font-size: 13px; font-weight: 600; color: #58a6ff; margin-bottom: 10px; word-break: break-all; }
+
+  .repo-meta { display: flex; gap: 16px; font-size: 12px; color: #8b949e; }
+  .repo-meta span b { color: #e6edf3; }
+
+  /* Reviews table */
+  .table-wrap { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: 500; }
+  td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1c2128; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge.pass { background: #1a3a1a; color: #3fb950; }
+  .badge.fail { background: #3a1a1a; color: #f85149; }
+
+  .score-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .score-pill.high   { background: #1a3a1a; color: #3fb950; }
+  .score-pill.mid    { background: #2d2a1a; color: #d29922; }
+  .score-pill.low    { background: #3a1a1a; color: #f85149; }
+
+  .fix-link { color: #58a6ff; text-decoration: none; font-size: 12px; }
+  .fix-link:hover { text-decoration: underline; }
+
+  .empty { text-align: center; color: #8b949e; padding: 48px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">🛡️ PRGuard</div>
+    <div class="sub">Team Code Quality Dashboard</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Total Reviews</div>
+      <div class="value blue" id="kpi-total">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Pass Rate</div>
+      <div class="value green" id="kpi-pass">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg Score</div>
+      <div class="value yellow" id="kpi-score">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Repos Tracked</div>
+      <div class="value purple" id="kpi-repos">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="card">
+      <h3>Score Trend</h3>
+      <canvas id="trendChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Issue Categories</h3>
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Per-repo stats -->
+  <div class="card" style="margin-bottom:32px;">
+    <h3>Repos</h3>
+    <div class="repo-grid" id="repo-grid"></div>
+  </div>
+
+  <!-- Reviews table -->
+  <div class="card">
+    <h3>Recent Reviews</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Repo</th>
+            <th>PR</th>
+            <th>Title</th>
+            <th>Score</th>
+            <th>Result</th>
+            <th>Fix Branch</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="reviews-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const COLORS = ['#58a6ff','#3fb950','#d29922','#bc8cff','#f85149','#79c0ff','#56d364','#e3b341'];
+
+async function load() {
+  const res  = await fetch('/api/stats');
+  const data = await res.json();
+
+  // KPIs
+  document.getElementById('kpi-total').textContent = data.total;
+  document.getElementById('kpi-pass').textContent  = data.pass_rate + '%';
+  document.getElementById('kpi-score').textContent = data.avg_score + '/10';
+  document.getElementById('kpi-repos').textContent = Object.keys(data.repo_stats).length;
+
+  if (data.total === 0) {
+    document.getElementById('reviews-tbody').innerHTML =
+      '<tr><td colspan="7" class="empty">No reviews yet — open a Pull Request to get started!</td></tr>';
+    return;
+  }
+
+  // Score trend chart
+  const trend = data.score_trend;
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: trend.map(t => `${t.repo.split('/')[1]} #${t.pr}`),
+      datasets: [{
+        label: 'Score',
+        data: trend.map(t => t.score),
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.1)',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: '#58a6ff',
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 10, grid: { color: '#21262d' }, ticks: { color: '#8b949e' } },
+        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxRotation: 30 } }
+      }
+    }
+  });
+
+  // Category doughnut chart
+  const cats   = Object.keys(data.category_counts);
+  const counts = Object.values(data.category_counts);
+  new Chart(document.getElementById('categoryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: cats,
+      datasets: [{ data: counts, backgroundColor: COLORS, borderWidth: 0 }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, padding: 8 } }
+      }
+    }
+  });
+
+  // Repo cards
+  const repoGrid = document.getElementById('repo-grid');
+  repoGrid.innerHTML = '';
+  for (const [name, stats] of Object.entries(data.repo_stats)) {
+    repoGrid.innerHTML += `
+      <div class="repo-card">
+        <div class="name">${name}</div>
+        <div class="repo-meta">
+          <span><b>${stats.total}</b> PRs</span>
+          <span><b>${stats.pass_rate}%</b> pass</span>
+          <span><b>${stats.avg_score}/10</b> avg</span>
+        </div>
+      </div>`;
+  }
+
+  // Reviews table
+  const tbody = document.getElementById('reviews-tbody');
+  tbody.innerHTML = '';
+  for (const r of data.reviews) {
+    const scoreClass = r.score >= 7 ? 'high' : r.score >= 5 ? 'mid' : 'low';
+    const repoName   = r.repo.split('/')[1] || r.repo;
+    const date       = r.reviewed_at.slice(0, 16).replace('T', ' ');
+    const fixCell    = r.fix_branch
+      ? `<a class="fix-link" href="https://github.com/${r.repo}/tree/${r.fix_branch}" target="_blank">🔧 ${r.fix_branch}</a>`
+      : '<span style="color:#8b949e">—</span>';
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${repoName}</td>
+        <td><a class="fix-link" href="https://github.com/${r.repo}/pull/${r.pr_number}" target="_blank">#${r.pr_number}</a></td>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pr_title || '—'}</td>
+        <td><span class="score-pill ${scoreClass}">${r.score.toFixed(1)}</span></td>
+        <td><span class="badge ${r.passed ? 'pass' : 'fail'}">${r.passed ? 'PASSED' : 'FAILED'}</span></td>
+        <td>${fixCell}</td>
+        <td style="color:#8b949e;white-space:nowrap">${date}</td>
+      </tr>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

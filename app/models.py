@@ -30,4 +30,5 @@ class PRContext(BaseModel):
     pr_number: int
     pr_title: str
     head_sha: str
+    base_branch: str                       # e.g. "main"
     diff: str                              # raw unified diff text
