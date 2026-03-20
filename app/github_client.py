@@ -7,20 +7,22 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.github.com"
 
 
-def _headers():
-    token = settings.GITHUB_TOKEN
-    if not token:
-        raise ValueError("GITHUB_TOKEN is missing")
+class GitHubClient:
+    def __init__(self):
+        self.token = settings.GITHUB_TOKEN
+        if not self.token:
+            raise ValueError("GITHUB_TOKEN is missing")
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
 
-    return {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
+    def _client(self) -> httpx.Client:
+        return httpx.Client(headers=self.headers, timeout=30)
 
 
-def _client() -> httpx.Client:
-    return httpx.Client(headers=_headers(), timeout=30)
+github_client = GitHubClient()
 
 
 # -------------------- PR DATA --------------------
@@ -28,22 +30,32 @@ def _client() -> httpx.Client:
 def get_pr_diff(repo: str, pr_number: int) -> str:
     url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}"
 
-    with _client() as client:
-        resp = client.get(
-            url,
-            headers={**_headers(), "Accept": "application/vnd.github.v3.diff"},
-        )
-        resp.raise_for_status()
+    try:
+        with github_client._client() as client:
+            resp = client.get(
+                url,
+                headers={**github_client.headers, "Accept": "application/vnd.github.v3.diff"},
+            )
+            resp.raise_for_status()
 
-        diff = resp.text
-        logger.info("Fetched diff for %s#%d (%d chars)", repo, pr_number, len(diff))
-        return diff
+            diff = resp.text
+            logger.info("Fetched diff for %s#%d (%d chars)", repo, pr_number, len(diff))
+            return diff
+    except httpx.HTTPStatusError as e:
+        logger.error("Failed to fetch diff for %s#%d: %s", repo, pr_number, e)
+        raise
+    except httpx.RequestError as e:
+        logger.error("Request error while fetching diff for %s#%d: %s", repo, pr_number, e)
+        raise
+    except Exception as e:
+        logger.error("Unexpected error while fetching diff for %s#%d: %s", repo, pr_number, e)
+        raise
 
 
 def get_pr_metadata(repo: str, pr_number: int) -> dict:
     url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}"
 
-    with _client() as client:
+    with github_client._client() as client:
         resp = client.get(url)
         resp.raise_for_status()
         data = resp.json()
@@ -60,7 +72,7 @@ def get_pr_metadata(repo: str, pr_number: int) -> dict:
 def post_pr_comment(repo: str, pr_number: int, body: str) -> None:
     url = f"{BASE_URL}/repos/{repo}/issues/{pr_number}/comments"
 
-    with _client() as client:
+    with github_client._client() as client:
         resp = client.post(url, json={"body": body})
         resp.raise_for_status()
         logger.info("Posted summary comment on %s#%d", repo, pr_number)
@@ -84,7 +96,7 @@ def post_inline_comment(
         "side": "RIGHT",
     }
 
-    with _client() as client:
+    with github_client._client() as client:
         resp = client.post(url, json=payload)
         resp.raise_for_status()
         logger.info("Inline comment posted on %s:%d", path, line)
@@ -110,7 +122,7 @@ def set_commit_status(
         "context": context,
     }
 
-    with _client() as client:
+    with github_client._client() as client:
         resp = client.post(url, json=payload)
 
         try:
@@ -150,7 +162,7 @@ def create_check_run(
     if status == "completed":
         payload["conclusion"] = conclusion
 
-    with _client() as client:
+    with github_client._client() as client:
         resp = client.post(url, json=payload)
 
         try:
