@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from typing import Optional
 
 from groq import Groq
@@ -10,7 +9,7 @@ from app.models import ReviewResult, CodeIssue, Severity
 
 logger = logging.getLogger(__name__)
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY", ""))
+client = Groq(api_key=settings.GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You are a strict, senior software engineer performing a mandatory code quality gate review.
 Your job is NOT to be helpful or encouraging. Your job is to enforce quality standards.
@@ -61,7 +60,7 @@ def _build_prompt(pr_title: str, diff: str) -> str:
     truncated = diff[:MAX_DIFF_CHARS]
     if len(diff) > MAX_DIFF_CHARS:
         truncated += f"\n\n[DIFF TRUNCATED — {len(diff) - MAX_DIFF_CHARS} additional chars not shown]"
-    return f"{SYSTEM_PROMPT}\n\nPR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
+    return f"PR TITLE: {pr_title}\n\nDIFF:\n{truncated}\n\nReturn only the JSON object."
 
 
 def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> ReviewResult:
@@ -71,8 +70,11 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
     logger.info("Sending diff to Groq for review (diff_len=%d)", len(diff))
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": _build_prompt(pr_title, diff)}],
+        model=settings.GROQ_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _build_prompt(pr_title, diff)},
+        ],
         temperature=0.1,
         response_format={"type": "json_object"},
     )
@@ -117,11 +119,27 @@ def mock_review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) ->
             description="Function `process` is 45 lines long and handles both validation and DB writes. Split into two functions.",
             suggested_fix="Extract DB logic into `_persist_record(data)` and keep `process()` as orchestrator only.",
         ),
+        CodeIssue(
+            file="src/utils.py",
+            line_range="L3",
+            category="naming",
+            severity=Severity.MEDIUM,
+            description="Variable `d` is used as the main data dictionary. Name conveys no meaning.",
+            suggested_fix="Rename `d` to `user_payload` or `request_data` depending on context.",
+        ),
+        CodeIssue(
+            file="src/handler.py",
+            line_range="L30",
+            category="error_handling",
+            severity=Severity.HIGH,
+            description="`requests.post()` call has no try/except. A network failure will crash the worker.",
+            suggested_fix="Wrap in try/except requests.RequestException and log + return error response.",
+        ),
     ]
     score = 4.5
     return ReviewResult(
         score=score,
-        summary="This PR has structural and reliability problems.",
+        summary="This PR has structural and reliability problems. Two HIGH severity issues must be resolved before merge.",
         issues=issues,
         passed=score >= threshold,
     )

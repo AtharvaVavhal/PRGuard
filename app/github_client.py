@@ -23,27 +23,7 @@ def _client() -> httpx.Client:
     return httpx.Client(headers=_headers(), timeout=30)
 
 
-def post_inline_comment(repo: str, pr_number: int, body: str, commit_id: str, path: str, line: int):
-    url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}/comments"
-
-    payload = {
-        "body": body,
-        "commit_id": commit_id,
-        "path": path,
-        "line": line,
-        "side": "RIGHT"
-    }
-
-    with _client() as client:
-        resp = client.post(url, json=payload)
-
-        try:
-            resp.raise_for_status()
-            logger.info("Inline comment posted on %s:%d", path, line)
-        except httpx.HTTPStatusError:
-            logger.error("Inline comment failed: %s", resp.text)
-            raise
-
+# -------------------- PR DATA --------------------
 
 def get_pr_diff(repo: str, pr_number: int) -> str:
     url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}"
@@ -75,29 +55,59 @@ def get_pr_metadata(repo: str, pr_number: int) -> dict:
         }
 
 
+# -------------------- COMMENTS --------------------
+
 def post_pr_comment(repo: str, pr_number: int, body: str) -> None:
     url = f"{BASE_URL}/repos/{repo}/issues/{pr_number}/comments"
 
     with _client() as client:
         resp = client.post(url, json={"body": body})
-
-        try:
-            resp.raise_for_status()
-            logger.info("Posted summary comment on %s#%d", repo, pr_number)
-        except httpx.HTTPStatusError:
-            logger.error("Summary comment failed: %s", resp.text)
-            raise
+        resp.raise_for_status()
+        logger.info("Posted summary comment on %s#%d", repo, pr_number)
 
 
-def create_check_run(repo: str, sha: str, name: str, status: str, conclusion: str | None, output: dict):
-    url = f"https://api.github.com/repos/{repo}/check-runs"
+def post_inline_comment(
+    repo: str,
+    pr_number: int,
+    body: str,
+    commit_id: str,
+    path: str,
+    line: int,
+):
+    url = f"{BASE_URL}/repos/{repo}/pulls/{pr_number}/comments"
 
     payload = {
-        "name": name,
-        "head_sha": sha,
-        "status": status,  # queued, in_progress, completed
-        "conclusion": conclusion,  # success, failure, neutral
-        "output": output,
+        "body": body,
+        "commit_id": commit_id,
+        "path": path,
+        "line": line,
+        "side": "RIGHT",
+    }
+
+    with _client() as client:
+        resp = client.post(url, json=payload)
+        resp.raise_for_status()
+        logger.info("Inline comment posted on %s:%d", path, line)
+
+
+# -------------------- COMMIT STATUS --------------------
+
+def set_commit_status(
+    repo: str,
+    sha: str,
+    state: str,
+    description: str = "",
+    context: str = "pr-review",
+) -> None:
+    """
+    state: pending | success | failure | error
+    """
+    url = f"{BASE_URL}/repos/{repo}/statuses/{sha}"
+
+    payload = {
+        "state": state,
+        "description": description,
+        "context": context,
     }
 
     with _client() as client:
@@ -105,7 +115,53 @@ def create_check_run(repo: str, sha: str, name: str, status: str, conclusion: st
 
         try:
             resp.raise_for_status()
-            logger.info("Created check run '%s' on %s@%s", name, repo, sha[:7])
+            logger.info("Set commit status '%s' on %s@%s", state, repo, sha[:7])
         except httpx.HTTPStatusError:
-            logger.error("Check run creation failed: %s", resp.text)
+            logger.error("Commit status failed: %s", resp.text)
+            raise
+
+
+# -------------------- CHECKS API --------------------
+
+def create_check_run(
+    repo: str,
+    sha: str,
+    name: str,
+    status: str,
+    conclusion: str | None,
+    output: dict,
+):
+    """
+    status: queued | in_progress | completed
+    conclusion: success | failure | neutral (only when completed)
+    """
+    url = f"{BASE_URL}/repos/{repo}/check-runs"
+
+    payload = {
+        "name": name,
+        "head_sha": sha,
+        "status": status,
+        "output": {
+            "title": output.get("title", "PR Review"),
+            "summary": output.get("summary", ""),
+        },
+    }
+
+    if status == "completed":
+        payload["conclusion"] = conclusion
+
+    with _client() as client:
+        resp = client.post(url, json=payload)
+
+        try:
+            resp.raise_for_status()
+            logger.info(
+                "Check run '%s' (%s) created for %s@%s",
+                name,
+                status,
+                repo,
+                sha[:7],
+            )
+        except httpx.HTTPStatusError:
+            logger.error("Check run failed: %s", resp.text)
             raise
