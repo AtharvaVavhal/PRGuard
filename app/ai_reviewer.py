@@ -71,7 +71,7 @@ def review_pr(pr_title: str, diff: str, threshold: Optional[int] = None) -> Revi
     logger.info("Sending diff to Gemini for review (diff_len=%d)", len(diff))
 
     model = genai.GenerativeModel(
-        model_name="gemini-pro",
+        model_name="gemini-1.5-flash",
         generation_config=genai.GenerationConfig(
             temperature=0.1,
             response_mime_type="application/json",
