@@ -1,37 +1,38 @@
-import sqlite3
 import json
 import logging
+import os
 from datetime import datetime
-from pathlib import Path
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = Path("prguard.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _conn():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 def init_db() -> None:
     with _conn() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS reviews (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                repo        TEXT NOT NULL,
-                pr_number   INTEGER NOT NULL,
-                pr_title    TEXT,
-                score       REAL NOT NULL,
-                passed      INTEGER NOT NULL,
-                issues      TEXT NOT NULL,
-                fix_branch  TEXT,
-                reviewed_at TEXT NOT NULL
-            )
-        """)
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id          SERIAL PRIMARY KEY,
+                    repo        TEXT NOT NULL,
+                    pr_number   INTEGER NOT NULL,
+                    pr_title    TEXT,
+                    score       REAL NOT NULL,
+                    passed      BOOLEAN NOT NULL,
+                    issues      TEXT NOT NULL,
+                    fix_branch  TEXT,
+                    reviewed_at TEXT NOT NULL
+                )
+            """)
         conn.commit()
-    logger.info("Database initialised at %s", DB_PATH)
+    logger.info("PostgreSQL database initialised")
 
 
 def save_review(
@@ -44,40 +45,40 @@ def save_review(
     fix_branch: str | None = None,
 ) -> None:
     with _conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO reviews (repo, pr_number, pr_title, score, passed, issues, fix_branch, reviewed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                repo,
-                pr_number,
-                pr_title,
-                score,
-                int(passed),
-                json.dumps(issues),
-                fix_branch,
-                datetime.utcnow().isoformat(),
-            ),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO reviews (repo, pr_number, pr_title, score, passed, issues, fix_branch, reviewed_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    repo,
+                    pr_number,
+                    pr_title,
+                    score,
+                    passed,
+                    json.dumps(issues),
+                    fix_branch,
+                    datetime.utcnow().isoformat(),
+                ),
+            )
         conn.commit()
     logger.info("Saved review for %s#%d (score=%.1f)", repo, pr_number, score)
 
 
 def get_latest_review(repo: str, pr_number: int) -> dict | None:
-    """
-    Returns the most recent review for a given repo + PR number, or None.
-    """
     with _conn() as conn:
-        row = conn.execute(
-            """
-            SELECT * FROM reviews
-            WHERE repo = ? AND pr_number = ?
-            ORDER BY reviewed_at DESC
-            LIMIT 1
-            """,
-            (repo, pr_number),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT * FROM reviews
+                WHERE repo = %s AND pr_number = %s
+                ORDER BY reviewed_at DESC
+                LIMIT 1
+                """,
+                (repo, pr_number),
+            )
+            row = cur.fetchone()
 
     if not row:
         return None
@@ -89,9 +90,9 @@ def get_latest_review(repo: str, pr_number: int) -> dict | None:
 
 def get_stats() -> dict:
     with _conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM reviews ORDER BY reviewed_at DESC"
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM reviews ORDER BY reviewed_at DESC")
+            rows = cur.fetchall()
 
     if not rows:
         return {
@@ -105,12 +106,12 @@ def get_stats() -> dict:
         }
 
     reviews = [dict(r) for r in rows]
-
     for r in reviews:
         r["issues"] = json.loads(r["issues"])
+        r["passed"] = bool(r["passed"])
 
-    total = len(reviews)
-    passed = sum(1 for r in reviews if r["passed"])
+    total     = len(reviews)
+    passed    = sum(1 for r in reviews if r["passed"])
     avg_score = sum(r["score"] for r in reviews) / total
 
     score_trend = [
