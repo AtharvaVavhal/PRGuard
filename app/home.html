@@ -8,16 +8,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:    #020407;
-  --neon:  #00ff88;
-  --blue:  #0ea5e9;
-  --text:  #c8e6f0;
-  --muted: #2d5a6e;
-  --s1:    #060d12;
+  --bg:     #020407;
+  --neon:   #00ff88;
+  --blue:   #0ea5e9;
+  --text:   #c8e6f0;
+  --muted:  #2d5a6e;
+  --s1:     #060d12;
   --border: #0f2030;
-  --mono:  'Space Mono', monospace;
-  --display: 'Orbitron', monospace;
-  --body:  'DM Sans', sans-serif;
+  --mono:   'Space Mono', monospace;
+  --display:'Orbitron', monospace;
+  --body:   'DM Sans', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,7 +30,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Grid bg */
 body::before {
   content: '';
   position: fixed; inset: 0;
@@ -38,188 +37,149 @@ body::before {
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 48px 48px;
-  opacity: 0.35;
-  z-index: 0;
+  opacity: 0.35; z-index: 0;
 }
 
-/* Scanlines */
 body::after {
   content: '';
   position: fixed; inset: 0;
   background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-  pointer-events: none;
-  z-index: 999;
+  pointer-events: none; z-index: 999;
 }
 
 .wrap { position: relative; z-index: 1; }
 
-/* NAV */
+/* ── NAV ── */
 nav {
-  position: fixed; top: 0; left: 0; right: 0;
-  z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   border-bottom: 1px solid var(--border);
-  background: rgba(2,4,7,0.9);
+  background: rgba(2,4,7,0.92);
   backdrop-filter: blur(12px);
 }
 
 .nav-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 40px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 20px; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 
 .nav-logo {
   font-family: var(--display);
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  color: var(--neon);
-  text-shadow: 0 0 20px rgba(0,255,136,0.4);
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  font-size: 13px; font-weight: 900; letter-spacing: 0.15em;
+  color: var(--neon); text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  display: flex; align-items: center; gap: 8px;
 }
 
-.nav-logo span { font-size: 20px; }
+.nav-logo span { font-size: 18px; }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 32px;
+.nav-links { display: flex; align-items: center; gap: 16px; }
+
+.nav-link-text {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.12em; color: var(--muted);
+  text-decoration: none; text-transform: uppercase;
+  transition: color 0.2s; display: none;
 }
 
-.nav-links a {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  text-decoration: none;
-  text-transform: uppercase;
-  transition: color 0.2s;
-}
-
-.nav-links a:hover { color: var(--neon); }
+@media (min-width: 640px) { .nav-link-text { display: block; } }
+.nav-link-text:hover { color: var(--neon); }
 
 .nav-btn {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  padding: 8px 20px;
-  border: 1px solid var(--neon);
-  border-radius: 4px;
-  color: var(--neon) !important;
-  text-decoration: none;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.1em; padding: 7px 14px;
+  border: 1px solid var(--neon); border-radius: 4px;
+  color: var(--neon); text-decoration: none;
   transition: background 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
 }
 
 .nav-btn:hover {
-  background: rgba(0,255,136,0.08) !important;
+  background: rgba(0,255,136,0.08);
   box-shadow: 0 0 16px rgba(0,255,136,0.2);
-  color: var(--neon) !important;
 }
 
-/* HERO */
+/* ── HERO ── */
 .hero {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   text-align: center;
-  padding: 120px 40px 80px;
+  padding: 100px 20px 60px;
   position: relative;
 }
 
+@media (min-width: 768px) { .hero { padding: 120px 40px 80px; } }
+
 .hero-glow {
-  position: absolute;
-  top: 20%;
-  left: 50%;
+  position: absolute; top: 20%; left: 50%;
   transform: translateX(-50%);
-  width: 600px;
-  height: 300px;
+  width: min(600px, 100vw); height: 300px;
   background: radial-gradient(ellipse, rgba(0,255,136,0.07) 0%, transparent 70%);
   pointer-events: none;
 }
 
 .hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 6px 16px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  margin-bottom: 32px;
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 5px 14px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.1em; color: var(--muted);
+  margin-bottom: 28px;
   animation: fade-up 0.6s both;
+  flex-wrap: wrap; justify-content: center;
 }
+
+@media (min-width: 480px) { .hero-badge { font-size: 10px; } }
 
 .hero-badge .dot {
-  width: 5px; height: 5px;
-  background: var(--neon);
-  border-radius: 50%;
-  box-shadow: 0 0 6px var(--neon);
-  animation: blink 1.5s infinite;
+  width: 5px; height: 5px; background: var(--neon);
+  border-radius: 50%; box-shadow: 0 0 6px var(--neon);
+  animation: blink 1.5s infinite; flex-shrink: 0;
 }
 
-@keyframes blink {
-  0%,100% { opacity:1; } 50% { opacity:0.2; }
-}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
 .hero-title {
   font-family: var(--display);
-  font-size: clamp(48px, 8vw, 96px);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  line-height: 0.9;
-  margin-bottom: 24px;
+  font-size: clamp(36px, 9vw, 96px);
+  font-weight: 900; letter-spacing: -0.02em;
+  line-height: 0.95; margin-bottom: 20px;
   animation: fade-up 0.6s 0.1s both;
 }
 
+@media (min-width: 768px) { .hero-title { margin-bottom: 24px; } }
+
 .hero-title .line1 { color: var(--text); display: block; }
 .hero-title .line2 {
-  color: var(--neon);
-  display: block;
+  color: var(--neon); display: block;
   text-shadow: 0 0 40px rgba(0,255,136,0.4);
 }
 
 .hero-sub {
-  font-size: 18px;
-  font-weight: 300;
-  color: var(--muted);
-  max-width: 520px;
-  margin: 0 auto 48px;
+  font-size: clamp(15px, 2.5vw, 18px);
+  font-weight: 300; color: var(--muted);
+  max-width: 500px; margin: 0 auto 36px;
   line-height: 1.7;
   animation: fade-up 0.6s 0.2s both;
 }
 
+@media (min-width: 768px) { .hero-sub { margin-bottom: 48px; } }
 .hero-sub em { color: var(--text); font-style: normal; font-weight: 500; }
 
 .hero-cta {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
+  display: flex; gap: 12px;
+  justify-content: center; flex-wrap: wrap;
   animation: fade-up 0.6s 0.3s both;
 }
 
 .btn-primary {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  padding: 14px 32px;
-  background: var(--neon);
-  color: var(--bg);
-  border-radius: 4px;
-  text-decoration: none;
-  font-weight: 700;
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.1em; padding: 12px 24px;
+  background: var(--neon); color: var(--bg);
+  border-radius: 4px; text-decoration: none; font-weight: 700;
   transition: box-shadow 0.2s, transform 0.15s;
 }
+
+@media (min-width: 480px) { .btn-primary { font-size: 11px; padding: 14px 32px; } }
 
 .btn-primary:hover {
   box-shadow: 0 0 32px rgba(0,255,136,0.4);
@@ -227,17 +187,14 @@ nav {
 }
 
 .btn-secondary {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  padding: 14px 32px;
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 4px;
-  text-decoration: none;
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.1em; padding: 12px 24px;
+  border: 1px solid var(--border); color: var(--text);
+  border-radius: 4px; text-decoration: none;
   transition: border-color 0.2s, color 0.2s;
 }
 
+@media (min-width: 480px) { .btn-secondary { font-size: 11px; padding: 14px 32px; } }
 .btn-secondary:hover { border-color: var(--neon); color: var(--neon); }
 
 @keyframes fade-up {
@@ -245,165 +202,109 @@ nav {
   to   { opacity:1; transform:translateY(0); }
 }
 
-/* FEATURES */
-.features {
-  padding: 100px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
+/* ── SECTIONS ── */
+.section {
+  padding: 60px 20px;
+  max-width: 1200px; margin: 0 auto;
 }
+@media (min-width: 768px) { .section { padding: 100px 40px; } }
 
 .section-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: var(--neon);
-  text-transform: uppercase;
-  margin-bottom: 12px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.2em; color: var(--neon);
+  text-transform: uppercase; margin-bottom: 10px;
 }
 .section-label::before { content: '// '; }
 
 .section-title {
   font-family: var(--display);
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 900;
-  letter-spacing: -0.02em;
-  margin-bottom: 64px;
-  color: var(--text);
+  font-size: clamp(24px, 4vw, 44px);
+  font-weight: 900; letter-spacing: -0.02em;
+  margin-bottom: 40px; color: var(--text);
 }
+@media (min-width: 768px) { .section-title { margin-bottom: 64px; } }
 
+/* ── FEATURES ── */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 2px;
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
+  border-radius: 12px; overflow: hidden;
 }
+
+@media (min-width: 480px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .features-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .feature {
-  background: var(--s1);
-  padding: 32px;
+  background: var(--s1); padding: 24px;
   transition: background 0.2s;
-  position: relative;
-  overflow: hidden;
+  position: relative; overflow: hidden;
 }
 
+@media (min-width: 768px) { .feature { padding: 32px; } }
 .feature:hover { background: #070f18; }
 
 .feature::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 2px; height: 0;
-  background: var(--neon);
-  transition: height 0.3s;
+  content: ''; position: absolute;
+  top: 0; left: 0; width: 2px; height: 0;
+  background: var(--neon); transition: height 0.3s;
 }
-
 .feature:hover::before { height: 100%; }
 
-.feature-icon {
-  font-size: 28px;
-  margin-bottom: 16px;
-  display: block;
-}
+.feature-icon { font-size: 24px; margin-bottom: 12px; display: block; }
+@media (min-width: 768px) { .feature-icon { font-size: 28px; margin-bottom: 16px; } }
 
 .feature-title {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--neon);
-  margin-bottom: 10px;
-  text-transform: uppercase;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; color: var(--neon);
+  margin-bottom: 8px; text-transform: uppercase;
 }
 
-.feature-desc {
-  font-size: 14px;
-  font-weight: 300;
-  color: var(--muted);
-  line-height: 1.7;
-}
+.feature-desc { font-size: 13px; font-weight: 300; color: var(--muted); line-height: 1.7; }
 
-/* HOW IT WORKS */
-.how {
-  padding: 100px 40px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
+/* ── STEPS ── */
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
   position: relative;
 }
 
-.steps::before {
-  content: '';
-  position: absolute;
-  top: 28px; left: 28px; right: 28px;
-  height: 1px;
-  background: linear-gradient(90deg, var(--neon), var(--blue), var(--neon));
-  opacity: 0.3;
-}
+@media (min-width: 640px)  { .steps { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .steps { grid-template-columns: repeat(6, 1fr); gap: 0; } }
 
-.step {
-  padding: 0 24px 24px;
-  position: relative;
-}
+.step { padding: 0 12px 24px; }
+@media (min-width: 1024px) { .step { padding: 0 20px 24px; } }
 
 .step-num {
-  width: 56px; height: 56px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--display);
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--neon);
-  background: var(--bg);
-  margin-bottom: 20px;
-  position: relative;
-  z-index: 1;
+  width: 48px; height: 48px;
+  border: 1px solid var(--border); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 13px; font-weight: 900;
+  color: var(--neon); background: var(--bg);
+  margin-bottom: 16px; position: relative; z-index: 1;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-
-.step:hover .step-num {
-  border-color: var(--neon);
-  box-shadow: 0 0 16px rgba(0,255,136,0.3);
-}
+.step:hover .step-num { border-color: var(--neon); box-shadow: 0 0 16px rgba(0,255,136,0.3); }
 
 .step-title {
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--text);
-  margin-bottom: 8px;
-  text-transform: uppercase;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; color: var(--text);
+  margin-bottom: 6px; text-transform: uppercase;
 }
 
-.step-desc {
-  font-size: 13px;
-  font-weight: 300;
-  color: var(--muted);
-  line-height: 1.6;
-}
+.step-desc { font-size: 12px; font-weight: 300; color: var(--muted); line-height: 1.6; }
 
-/* FOOTER */
+/* ── FOOTER ── */
 footer {
   border-top: 1px solid var(--border);
-  padding: 32px 40px;
+  padding: 24px 20px;
   text-align: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
+  font-family: var(--mono); font-size: 9px;
+  color: var(--muted); letter-spacing: 0.08em;
 }
-
 footer span { color: var(--neon); }
 </style>
 </head>
@@ -414,14 +315,13 @@ footer span { color: var(--neon); }
   <div class="nav-inner">
     <div class="nav-logo"><span>🛡️</span> PRGUARD</div>
     <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#how">How It Works</a>
+      <a href="#features" class="nav-link-text">Features</a>
+      <a href="#how" class="nav-link-text">How It Works</a>
       <a href="/dashboard" class="nav-btn">Dashboard →</a>
     </div>
   </div>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
   <div class="hero-glow"></div>
   <div>
@@ -441,85 +341,33 @@ footer span { color: var(--neon); }
   </div>
 </section>
 
-<!-- FEATURES -->
-<section class="features" id="features">
+<section class="section" id="features">
   <div class="section-label">Capabilities</div>
   <div class="section-title">Everything your team needs<br>to ship clean code.</div>
   <div class="features-grid">
-    <div class="feature">
-      <span class="feature-icon">🤖</span>
-      <div class="feature-title">AI Code Review</div>
-      <div class="feature-desc">Scores every PR 0–10 across 8 categories including naming, complexity, security, and dead code.</div>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">💬</span>
-      <div class="feature-title">Inline Comments</div>
-      <div class="feature-desc">Issues are posted directly on the affected line in the diff — no digging through reports.</div>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">🔥</span>
-      <div class="feature-title">Auto-Fix Branch</div>
-      <div class="feature-desc">When a PR fails, PRGuard creates a fix branch with AI-applied corrections automatically.</div>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">📊</span>
-      <div class="feature-title">Team Dashboard</div>
-      <div class="feature-desc">Live dashboard tracking score trends, pass rates, and issue categories across all repos.</div>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">⚙️</span>
-      <div class="feature-title">Custom Rules</div>
-      <div class="feature-desc">Add a <code style="color:var(--neon);font-size:12px">prguard.yml</code> to your repo to define team-specific coding standards.</div>
-    </div>
-    <div class="feature">
-      <span class="feature-icon">💬</span>
-      <div class="feature-title">PR Chat</div>
-      <div class="feature-desc">Comment <code style="color:var(--neon);font-size:12px">/prguard &lt;question&gt;</code> to ask the bot anything about your review.</div>
-    </div>
+    <div class="feature"><span class="feature-icon">🤖</span><div class="feature-title">AI Code Review</div><div class="feature-desc">Scores every PR 0–10 across 8 categories including naming, complexity, security, and dead code.</div></div>
+    <div class="feature"><span class="feature-icon">💬</span><div class="feature-title">Inline Comments</div><div class="feature-desc">Issues posted directly on the affected line in the diff — no digging through reports.</div></div>
+    <div class="feature"><span class="feature-icon">🔥</span><div class="feature-title">Auto-Fix Branch</div><div class="feature-desc">When a PR fails, PRGuard creates a fix branch with AI-applied corrections automatically.</div></div>
+    <div class="feature"><span class="feature-icon">📊</span><div class="feature-title">Team Dashboard</div><div class="feature-desc">Live dashboard tracking score trends, pass rates, and issue categories across all repos.</div></div>
+    <div class="feature"><span class="feature-icon">⚙️</span><div class="feature-title">Custom Rules</div><div class="feature-desc">Add a <code style="color:var(--neon);font-size:11px">prguard.yml</code> to define team-specific coding standards.</div></div>
+    <div class="feature"><span class="feature-icon">💬</span><div class="feature-title">PR Chat</div><div class="feature-desc">Comment <code style="color:var(--neon);font-size:11px">/prguard &lt;question&gt;</code> to ask the bot anything about your review.</div></div>
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
-<section class="how" id="how">
+<section class="section" id="how">
   <div class="section-label">Workflow</div>
   <div class="section-title">From PR to review<br>in seconds.</div>
   <div class="steps">
-    <div class="step">
-      <div class="step-num">01</div>
-      <div class="step-title">PR Opened</div>
-      <div class="step-desc">Developer opens or pushes to a Pull Request on GitHub.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">02</div>
-      <div class="step-title">Diff Fetched</div>
-      <div class="step-desc">PRGuard fetches the diff and your team's custom rules from <code style="color:var(--neon)">prguard.yml</code>.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">03</div>
-      <div class="step-title">AI Reviews</div>
-      <div class="step-desc">LLaMA 3.3 reviews the code and generates a score with detailed issues.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">04</div>
-      <div class="step-title">Comments Posted</div>
-      <div class="step-desc">Inline comments and a summary are posted directly on the PR.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">05</div>
-      <div class="step-title">Auto-Fixed</div>
-      <div class="step-desc">If score is below threshold, a fix branch is created automatically.</div>
-    </div>
-    <div class="step">
-      <div class="step-num">06</div>
-      <div class="step-title">Gate Set</div>
-      <div class="step-desc">Commit status is set to ✅ or ❌ blocking or allowing the merge.</div>
-    </div>
+    <div class="step"><div class="step-num">01</div><div class="step-title">PR Opened</div><div class="step-desc">Developer opens or pushes to a Pull Request on GitHub.</div></div>
+    <div class="step"><div class="step-num">02</div><div class="step-title">Diff Fetched</div><div class="step-desc">PRGuard fetches the diff and custom rules from <code style="color:var(--neon)">prguard.yml</code>.</div></div>
+    <div class="step"><div class="step-num">03</div><div class="step-title">AI Reviews</div><div class="step-desc">LLaMA 3.3 reviews the code and generates a score with issues.</div></div>
+    <div class="step"><div class="step-num">04</div><div class="step-title">Comments Posted</div><div class="step-desc">Inline comments and a summary are posted directly on the PR.</div></div>
+    <div class="step"><div class="step-num">05</div><div class="step-title">Auto-Fixed</div><div class="step-desc">If score is below threshold, a fix branch is created automatically.</div></div>
+    <div class="step"><div class="step-num">06</div><div class="step-title">Gate Set</div><div class="step-desc">Commit status is set to ✅ or ❌ blocking or allowing the merge.</div></div>
   </div>
 </section>
 
-<footer>
-  Built with ❤️ · Powered by <span>Groq + LLaMA 3.3</span> · <span>PRGuard</span>
-</footer>
+<footer>Built with ❤️ · Powered by <span>Groq + LLaMA 3.3</span> · <span>PRGuard</span></footer>
 
 </div>
 </body>

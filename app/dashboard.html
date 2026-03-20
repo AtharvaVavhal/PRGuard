@@ -5,26 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>PRGuard · Mission Control</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg:       #020407;
-  --s1:       #060d12;
-  --s2:       #0a1520;
-  --border:   #0f2030;
-  --border2:  #1a3548;
-  --neon:     #00ff88;
-  --neon2:    #00cc6a;
-  --neon-dim: rgba(0,255,136,0.08);
-  --blue:     #0ea5e9;
-  --red:      #ff3b5c;
-  --yellow:   #fbbf24;
-  --text:     #c8e6f0;
-  --muted:    #2d5a6e;
-  --mono:     'Space Mono', monospace;
-  --display:  'Orbitron', monospace;
-  --body:     'DM Sans', sans-serif;
+  --bg:      #020407;
+  --s1:      #060d12;
+  --s2:      #0a1520;
+  --border:  #0f2030;
+  --border2: #1a3548;
+  --neon:    #00ff88;
+  --blue:    #0ea5e9;
+  --red:     #ff3b5c;
+  --yellow:  #fbbf24;
+  --text:    #c8e6f0;
+  --muted:   #2d5a6e;
+  --mono:    'Space Mono', monospace;
+  --display: 'Orbitron', monospace;
+  --body:    'DM Sans', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,421 +36,293 @@ body {
   overflow-x: hidden;
 }
 
-/* Scanline overlay */
 body::after {
   content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
   pointer-events: none;
   z-index: 999;
 }
 
-/* Animated grid bg */
 .grid-bg {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 48px 48px;
-  opacity: 0.4;
-  z-index: 0;
+  opacity: 0.4; z-index: 0;
 }
 
-.grid-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,255,136,0.04) 0%, transparent 70%);
-}
-
-/* HEADER */
+/* ── HEADER ── */
 header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: sticky; top: 0; z-index: 100;
   border-bottom: 1px solid var(--border2);
   background: rgba(2,4,7,0.92);
   backdrop-filter: blur(16px);
 }
 
 .header-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 32px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  max-width: 1400px; margin: 0 auto;
+  padding: 0 20px;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.logo { display: flex; align-items: center; gap: 10px; }
 
 .logo-mark {
-  width: 36px; height: 36px;
-  border: 2px solid var(--neon);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 0 12px rgba(0,255,136,0.3), inset 0 0 12px rgba(0,255,136,0.05);
+  width: 32px; height: 32px;
+  border: 2px solid var(--neon); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 12px rgba(0,255,136,0.3);
   animation: shield-pulse 3s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 @keyframes shield-pulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(0,255,136,0.3), inset 0 0 12px rgba(0,255,136,0.05); }
-  50%       { box-shadow: 0 0 24px rgba(0,255,136,0.5), inset 0 0 16px rgba(0,255,136,0.1); }
+  0%,100% { box-shadow: 0 0 12px rgba(0,255,136,0.3); }
+  50%      { box-shadow: 0 0 24px rgba(0,255,136,0.5); }
 }
 
 .logo-name {
   font-family: var(--display);
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: var(--neon);
-  text-shadow: 0 0 20px rgba(0,255,136,0.4);
+  font-size: 13px; font-weight: 900; letter-spacing: 0.12em;
+  color: var(--neon); text-shadow: 0 0 20px rgba(0,255,136,0.4);
 }
 
 .logo-tag {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  font-family: var(--mono); font-size: 8px;
+  color: var(--muted); letter-spacing: 0.15em;
+  display: none;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
+@media (min-width: 480px) { .logo-tag { display: block; } }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
 
 .status-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--neon);
-  letter-spacing: 0.1em;
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border2); border-radius: 20px;
+  padding: 4px 10px;
+  font-family: var(--mono); font-size: 9px;
+  color: var(--neon); letter-spacing: 0.1em;
 }
 
 .dot {
-  width: 6px; height: 6px;
-  background: var(--neon);
-  border-radius: 50%;
+  width: 6px; height: 6px; background: var(--neon);
+  border-radius: 50%; box-shadow: 0 0 6px var(--neon);
   animation: blink 1.5s ease-in-out infinite;
-  box-shadow: 0 0 6px var(--neon);
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
-}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 .clock {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted); display: none;
 }
+@media (min-width: 640px) { .clock { display: block; } }
 
-/* LAYOUT */
+/* ── LAYOUT ── */
 .wrap { position: relative; z-index: 1; }
-.container { max-width: 1400px; margin: 0 auto; padding: 32px; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+@media (min-width: 768px) { .container { padding: 32px; } }
 
-/* SECTION LABEL */
+/* ── SECTION LABEL ── */
 .sec-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--neon);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--neon); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
 }
 .sec-label::before { content: '//'; opacity: 0.5; }
 .sec-label::after  { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border2), transparent); }
 
-/* KPI */
+/* ── KPI ── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px; margin-bottom: 20px;
+}
+@media (min-width: 768px) {
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
 }
 
-@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
-
 .kpi {
-  background: var(--s1);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 24px;
-  position: relative;
-  overflow: hidden;
-  cursor: default;
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 16px;
+  position: relative; overflow: hidden;
   transition: border-color 0.3s, transform 0.2s;
   animation: fade-up 0.5s both;
 }
-
-.kpi:nth-child(1) { animation-delay: 0.05s; }
-.kpi:nth-child(2) { animation-delay: 0.1s; }
-.kpi:nth-child(3) { animation-delay: 0.15s; }
-.kpi:nth-child(4) { animation-delay: 0.2s; }
-
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@media (min-width: 768px) { .kpi { padding: 24px; } }
 
 .kpi:hover { border-color: var(--neon); transform: translateY(-2px); }
+.kpi:nth-child(1){animation-delay:.05s} .kpi:nth-child(2){animation-delay:.1s}
+.kpi:nth-child(3){animation-delay:.15s} .kpi:nth-child(4){animation-delay:.2s}
 
-.kpi-corner {
-  position: absolute;
-  top: 0; left: 0;
-  width: 40px; height: 40px;
-  border-right: 1px solid var(--neon);
-  border-bottom: 1px solid var(--neon);
-  border-radius: 0 0 10px 0;
-  opacity: 0.2;
+@keyframes fade-up {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
 }
 
-.kpi-glow {
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  opacity: 0.05;
+.kpi::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
 }
-
-.kpi.neon .kpi-glow  { background: var(--neon); }
-.kpi.blue .kpi-glow  { background: var(--blue); }
-.kpi.red .kpi-glow   { background: var(--red); }
-.kpi.gold .kpi-glow  { background: var(--yellow); }
+.kpi.neon::after  { background: linear-gradient(90deg, var(--neon), transparent); }
+.kpi.blue::after  { background: linear-gradient(90deg, var(--blue), transparent); }
+.kpi.gold::after  { background: linear-gradient(90deg, var(--yellow), transparent); }
+.kpi.red::after   { background: linear-gradient(90deg, var(--red), transparent); }
 
 .kpi-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 12px;
+  font-family: var(--mono); font-size: 8px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
 }
+@media (min-width: 768px) { .kpi-label { font-size: 9px; margin-bottom: 12px; } }
 
 .kpi-value {
-  font-family: var(--display);
-  font-weight: 900;
-  font-size: 42px;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  transition: all 0.5s;
+  font-family: var(--display); font-weight: 900;
+  font-size: 28px; line-height: 1;
 }
+@media (min-width: 480px) { .kpi-value { font-size: 36px; } }
+@media (min-width: 768px) { .kpi-value { font-size: 42px; } }
 
 .kpi.neon .kpi-value  { color: var(--neon);   text-shadow: 0 0 30px rgba(0,255,136,0.4); }
 .kpi.blue .kpi-value  { color: var(--blue);   text-shadow: 0 0 30px rgba(14,165,233,0.4); }
-.kpi.red .kpi-value   { color: var(--red);    text-shadow: 0 0 30px rgba(255,59,92,0.4); }
 .kpi.gold .kpi-value  { color: var(--yellow); text-shadow: 0 0 30px rgba(251,191,36,0.4); }
+.kpi.red .kpi-value   { color: var(--red);    text-shadow: 0 0 30px rgba(255,59,92,0.4); }
 
-/* CARDS */
+/* ── CARD ── */
 .card {
-  background: var(--s1);
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 24px;
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 16px;
   animation: fade-up 0.5s both;
 }
+@media (min-width: 768px) { .card { padding: 24px; } }
 
 .card-title {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 20px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 16px;
 }
 
-/* CHARTS */
-.charts-row {
+/* ── CHARTS ── */
+.charts-wrap {
   display: grid;
-  grid-template-columns: 3fr 2fr;
-  gap: 16px;
-  margin-bottom: 16px;
-  animation-delay: 0.25s;
+  grid-template-columns: 1fr;
+  gap: 12px; margin-bottom: 12px;
+}
+@media (min-width: 900px) {
+  .charts-wrap { grid-template-columns: 3fr 2fr; }
 }
 
-@media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+.chart-box { height: 200px; position: relative; }
+@media (min-width: 768px) { .chart-box { height: 240px; } }
 
-.chart-box { height: 260px; position: relative; }
-
-/* REPO GRID */
-.repo-row {
-  margin-bottom: 16px;
-  animation-delay: 0.35s;
+.chart-divider {
+  border: none; border-top: 1px solid var(--border2); margin: 16px 0;
+}
+@media (min-width: 900px) {
+  .chart-divider { display: none; }
+  .charts-inner {
+    display: grid; grid-template-columns: 3fr 2fr;
+    gap: 0;
+  }
+  .charts-inner .chart-section:first-child {
+    border-right: 1px solid var(--border2);
+    padding-right: 24px;
+    margin-right: 24px;
+  }
 }
 
+/* ── REPOS ── */
 .repos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
-  margin-top: 4px;
+  grid-template-columns: 1fr;
+  gap: 8px; margin-top: 4px;
 }
+@media (min-width: 480px) { .repos { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .repos { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1200px){ .repos { grid-template-columns: repeat(4, 1fr); } }
 
 .repo-card {
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
-  transition: border-color 0.2s, background 0.2s;
-  cursor: default;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+  transition: border-color 0.2s;
 }
-
-.repo-card:hover { border-color: var(--neon); background: rgba(0,255,136,0.02); }
+.repo-card:hover { border-color: var(--neon); }
 
 .repo-name {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--neon);
-  margin-bottom: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--neon); margin-bottom: 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.repo-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.repo-stat  { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.repo-stat b { color: var(--text); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; margin-top: 4px; -webkit-overflow-scrolling: touch; }
+
+table { width: 100%; border-collapse: collapse; min-width: 520px; }
+
+th {
+  text-align: left; padding: 8px 10px;
+  font-family: var(--mono); font-size: 8px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--border2);
   white-space: nowrap;
 }
 
-.repo-stats { display: flex; gap: 16px; }
-
-.repo-stat {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-}
-
-.repo-stat b { color: var(--text); }
-
-/* TABLE */
-.table-row { animation-delay: 0.4s; }
-
-.table-wrap { overflow-x: auto; margin-top: 4px; }
-
-table { width: 100%; border-collapse: collapse; }
-
-th {
-  text-align: left;
-  padding: 8px 12px;
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border2);
-}
-
 td {
-  padding: 11px 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  vertical-align: middle;
+  padding: 10px 10px; border-bottom: 1px solid var(--border);
+  font-size: 12px; vertical-align: middle;
 }
 
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: rgba(0,255,136,0.02); }
 
-.td-repo {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.td-pr a {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--blue);
-  text-decoration: none;
-}
+.td-repo { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.td-pr a { font-family: var(--mono); font-size: 11px; color: var(--blue); text-decoration: none; }
 .td-pr a:hover { text-decoration: underline; }
-
-.td-title {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0.7;
-}
+.td-title { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); opacity: 0.7; }
+.td-date  { font-family: var(--mono); font-size: 9px; color: var(--muted); white-space: nowrap; }
 
 .score-chip {
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 4px;
-  display: inline-block;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 4px; display: inline-block;
 }
 .score-chip.hi  { color: var(--neon);   background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); }
 .score-chip.mid { color: var(--yellow); background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); }
 .score-chip.lo  { color: var(--red);    background: rgba(255,59,92,0.08);  border: 1px solid rgba(255,59,92,0.2); }
 
 .result-chip {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  padding: 3px 8px;
-  border-radius: 3px;
-  display: inline-block;
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em;
+  padding: 3px 7px; border-radius: 3px; display: inline-block; white-space: nowrap;
 }
 .result-chip.pass { color: var(--neon); background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.2); }
 .result-chip.fail { color: var(--red);  background: rgba(255,59,92,0.08);  border: 1px solid rgba(255,59,92,0.2); }
 
-.fix-link {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--blue);
-  text-decoration: none;
-}
+.fix-link { font-family: var(--mono); font-size: 9px; color: var(--blue); text-decoration: none; }
 .fix-link:hover { text-decoration: underline; }
 
-.td-date {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.mb { margin-bottom: 16px; }
+.mb { margin-bottom: 12px; }
+@media (min-width: 768px) { .mb { margin-bottom: 16px; } }
 
 .empty {
-  text-align: center;
-  padding: 64px;
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.05em;
+  text-align: center; padding: 48px 16px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--muted); letter-spacing: 0.05em;
 }
 </style>
 </head>
 <body>
-
 <div class="grid-bg"></div>
-
 <div class="wrap">
+
 <header>
   <div class="header-inner">
     <div class="logo">
@@ -463,7 +333,7 @@ tr:hover td { background: rgba(0,255,136,0.02); }
       </div>
     </div>
     <div class="header-right">
-      <div class="status-pill"><div class="dot"></div>SYSTEM ONLINE</div>
+      <div class="status-pill"><div class="dot"></div>ONLINE</div>
       <div class="clock" id="clock">--:--:--</div>
     </div>
   </div>
@@ -471,66 +341,44 @@ tr:hover td { background: rgba(0,255,136,0.02); }
 
 <div class="container">
 
-  <!-- KPIs -->
-  <div class="sec-label">System Metrics</div>
+  <div class="sec-label">Metrics</div>
   <div class="kpi-grid mb">
-    <div class="kpi neon">
-      <div class="kpi-corner"></div>
-      <div class="kpi-glow"></div>
-      <div class="kpi-label">Total Reviews</div>
-      <div class="kpi-value" id="kpi-total">0</div>
-    </div>
-    <div class="kpi blue">
-      <div class="kpi-corner"></div>
-      <div class="kpi-glow"></div>
-      <div class="kpi-label">Pass Rate</div>
-      <div class="kpi-value" id="kpi-pass">0%</div>
-    </div>
-    <div class="kpi gold">
-      <div class="kpi-corner"></div>
-      <div class="kpi-glow"></div>
-      <div class="kpi-label">Avg Score</div>
-      <div class="kpi-value" id="kpi-score">0.0</div>
-    </div>
-    <div class="kpi red">
-      <div class="kpi-corner"></div>
-      <div class="kpi-glow"></div>
-      <div class="kpi-label">Repos Tracked</div>
-      <div class="kpi-value" id="kpi-repos">0</div>
-    </div>
+    <div class="kpi neon"><div class="kpi-label">Total Reviews</div><div class="kpi-value" id="kpi-total">0</div></div>
+    <div class="kpi blue"><div class="kpi-label">Pass Rate</div><div class="kpi-value" id="kpi-pass">0%</div></div>
+    <div class="kpi gold"><div class="kpi-label">Avg Score</div><div class="kpi-value" id="kpi-score">0.0</div></div>
+    <div class="kpi red"><div class="kpi-label">Repos</div><div class="kpi-value" id="kpi-repos">0</div></div>
   </div>
 
-  <!-- Charts -->
   <div class="sec-label">Analytics</div>
-  <div class="charts-row mb card" style="padding:0; overflow:hidden; display:grid; grid-template-columns:3fr 2fr;">
-    <div style="padding:24px; border-right:1px solid var(--border2);">
-      <div class="card-title">Score Trend — Last 20 Reviews</div>
-      <div class="chart-box"><canvas id="trendChart"></canvas></div>
-    </div>
-    <div style="padding:24px;">
-      <div class="card-title">Issue Categories</div>
-      <div class="chart-box"><canvas id="catChart"></canvas></div>
+  <div class="card mb">
+    <div class="charts-inner">
+      <div class="chart-section">
+        <div class="card-title">Score Trend</div>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+      </div>
+      <hr class="chart-divider">
+      <div class="chart-section">
+        <div class="card-title">Issue Categories</div>
+        <div class="chart-box"><canvas id="catChart"></canvas></div>
+      </div>
     </div>
   </div>
 
-  <!-- Repos -->
   <div class="sec-label">Repositories</div>
-  <div class="card repo-row mb">
-    <div class="repos" id="repos"></div>
+  <div class="card mb">
+    <div class="repos" id="repos"><div class="empty">// No repos yet</div></div>
   </div>
 
-  <!-- Table -->
   <div class="sec-label">Review Log</div>
-  <div class="card table-row">
+  <div class="card">
     <div class="table-wrap">
       <table>
         <thead>
-          <tr>
-            <th>Repo</th><th>PR</th><th>Title</th>
-            <th>Score</th><th>Result</th><th>Fix</th><th>Date</th>
-          </tr>
+          <tr><th>Repo</th><th>PR</th><th>Title</th><th>Score</th><th>Result</th><th>Fix</th><th>Date</th></tr>
         </thead>
-        <tbody id="tbody"></tbody>
+        <tbody id="tbody">
+          <tr><td colspan="7"><div class="empty">Loading...</div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -539,125 +387,82 @@ tr:hover td { background: rgba(0,255,136,0.02); }
 </div>
 
 <script>
-// Clock
-function tick() {
-  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
-}
-tick(); setInterval(tick, 1000);
+function tick() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US',{hour12:false}); }
+tick(); setInterval(tick,1000);
 
-// Chart defaults
-Chart.defaults.color = '#2d5a6e';
-Chart.defaults.borderColor = '#0f2030';
-Chart.defaults.font.family = "'Space Mono', monospace";
-Chart.defaults.font.size = 10;
+Chart.defaults.color='#2d5a6e';
+Chart.defaults.borderColor='#0f2030';
+Chart.defaults.font.family="'Space Mono',monospace";
+Chart.defaults.font.size=10;
 
-const COLORS = ['#00ff88','#0ea5e9','#fbbf24','#ff3b5c','#a78bfa','#34d399','#f472b6','#38bdf8'];
+const COLORS=['#00ff88','#0ea5e9','#fbbf24','#ff3b5c','#a78bfa','#34d399','#f472b6','#38bdf8'];
+let tChart,cChart;
 
-let trendChart, catChart;
+async function load(){
+  const data=await fetch('/api/stats').then(r=>r.json());
 
-async function load() {
-  const data = await fetch('/api/stats').then(r => r.json());
+  animNum('kpi-total',data.total||0,'');
+  animNum('kpi-pass',data.pass_rate||0,'%');
+  document.getElementById('kpi-score').textContent=(data.avg_score||0).toFixed(1);
+  animNum('kpi-repos',Object.keys(data.repo_stats||{}).length,'');
 
-  // Animate KPIs
-  animNum('kpi-total', data.total || 0, '');
-  animNum('kpi-pass',  data.pass_rate || 0, '%');
-  document.getElementById('kpi-score').textContent = (data.avg_score || 0).toFixed(1);
-  animNum('kpi-repos', Object.keys(data.repo_stats || {}).length, '');
-
-  if (!data.total) {
-    document.getElementById('tbody').innerHTML =
-      '<tr><td colspan="7"><div class="empty">// NO REVIEWS YET — OPEN A PULL REQUEST TO INITIALIZE</div></td></tr>';
-    document.getElementById('repos').innerHTML =
-      '<div class="empty" style="padding:24px">// NO REPOS TRACKED</div>';
+  if(!data.total){
+    document.getElementById('tbody').innerHTML='<tr><td colspan="7"><div class="empty">// No reviews yet — open a Pull Request to get started</div></td></tr>';
+    document.getElementById('repos').innerHTML='<div class="empty">// No repos tracked</div>';
     return;
   }
 
-  // Trend chart
-  const trend = data.score_trend || [];
-  if (trendChart) trendChart.destroy();
-  trendChart = new Chart(document.getElementById('trendChart'), {
-    type: 'line',
-    data: {
-      labels: trend.map(t => `${t.repo.split('/')[1]}#${t.pr}`),
-      datasets: [{
-        data: trend.map(t => t.score),
-        borderColor: '#00ff88',
-        backgroundColor: (ctx) => {
-          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 260);
-          g.addColorStop(0, 'rgba(0,255,136,0.15)');
-          g.addColorStop(1, 'rgba(0,255,136,0)');
-          return g;
-        },
-        borderWidth: 2,
-        pointRadius: 5,
-        pointBackgroundColor: trend.map(t =>
-          t.score >= 7 ? '#00ff88' : t.score >= 5 ? '#fbbf24' : '#ff3b5c'
-        ),
-        pointBorderColor: '#020407',
-        pointBorderWidth: 2,
-        tension: 0.4,
-        fill: true,
+  const trend=data.score_trend||[];
+  if(tChart) tChart.destroy();
+  tChart=new Chart(document.getElementById('trendChart'),{
+    type:'line',
+    data:{
+      labels:trend.map(t=>`${t.repo.split('/')[1]}#${t.pr}`),
+      datasets:[{
+        data:trend.map(t=>t.score),
+        borderColor:'#00ff88',
+        backgroundColor:(ctx)=>{const g=ctx.chart.ctx.createLinearGradient(0,0,0,220);g.addColorStop(0,'rgba(0,255,136,0.15)');g.addColorStop(1,'rgba(0,255,136,0)');return g;},
+        borderWidth:2,pointRadius:4,
+        pointBackgroundColor:trend.map(t=>t.score>=7?'#00ff88':t.score>=5?'#fbbf24':'#ff3b5c'),
+        pointBorderColor:'#020407',pointBorderWidth:2,tension:0.4,fill:true,
       }]
     },
-    options: {
-      animation: { duration: 800, easing: 'easeOutQuart' },
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { min: 0, max: 10, grid: { color: '#0f2030' }, ticks: { stepSize: 2 } },
-        x: { grid: { color: '#0f2030' }, ticks: { maxRotation: 40, maxTicksLimit: 10 } }
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,max:10,grid:{color:'#0f2030'},ticks:{stepSize:2}},
+        x:{grid:{color:'#0f2030'},ticks:{maxRotation:40,maxTicksLimit:8}}
       },
-      maintainAspectRatio: false,
+      maintainAspectRatio:false,
     }
   });
 
-  // Category chart
-  const cats   = Object.keys(data.category_counts || {});
-  const counts = Object.values(data.category_counts || {});
-  if (catChart) catChart.destroy();
-  catChart = new Chart(document.getElementById('catChart'), {
-    type: 'doughnut',
-    data: {
-      labels: cats,
-      datasets: [{
-        data: counts,
-        backgroundColor: COLORS,
-        borderColor: '#020407',
-        borderWidth: 3,
-        hoverOffset: 8,
-      }]
-    },
-    options: {
-      animation: { duration: 800 },
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10 } } },
-      maintainAspectRatio: false,
-      cutout: '60%',
+  const cats=Object.keys(data.category_counts||{});
+  const counts=Object.values(data.category_counts||{});
+  if(cChart) cChart.destroy();
+  cChart=new Chart(document.getElementById('catChart'),{
+    type:'doughnut',
+    data:{labels:cats,datasets:[{data:counts,backgroundColor:COLORS,borderColor:'#020407',borderWidth:3,hoverOffset:6}]},
+    options:{
+      plugins:{legend:{position:'bottom',labels:{boxWidth:8,padding:8}}},
+      maintainAspectRatio:false,cutout:'60%',
     }
   });
 
-  // Repos
-  const repos = Object.entries(data.repo_stats || {});
-  document.getElementById('repos').innerHTML = repos.length
-    ? repos.map(([name, s]) => `
-        <div class="repo-card">
-          <div class="repo-name">${name}</div>
-          <div class="repo-stats">
-            <div class="repo-stat"><b>${s.total}</b> PRs</div>
-            <div class="repo-stat"><b>${s.pass_rate}%</b> pass</div>
-            <div class="repo-stat"><b>${s.avg_score}/10</b> avg</div>
-          </div>
-        </div>`).join('')
-    : '<div class="empty" style="padding:24px">// NO REPOS</div>';
+  const repos=Object.entries(data.repo_stats||{});
+  document.getElementById('repos').innerHTML=repos.length
+    ?repos.map(([n,s])=>`<div class="repo-card"><div class="repo-name">${n}</div><div class="repo-stats"><div class="repo-stat"><b>${s.total}</b> PRs</div><div class="repo-stat"><b>${s.pass_rate}%</b> pass</div><div class="repo-stat"><b>${s.avg_score}/10</b></div></div></div>`).join('')
+    :'<div class="empty">// No repos</div>';
 
-  // Table
-  document.getElementById('tbody').innerHTML = (data.reviews || []).map(r => {
-    const sc  = r.score >= 7 ? 'hi' : r.score >= 5 ? 'mid' : 'lo';
-    const fix = r.fix_branch
-      ? `<a class="fix-link" href="https://github.com/${r.repo}/tree/${r.fix_branch}" target="_blank">⎇ ${r.fix_branch.split('/').pop()}</a>`
-      : '<span style="color:var(--border2)">—</span>';
+  document.getElementById('tbody').innerHTML=(data.reviews||[]).map(r=>{
+    const sc=r.score>=7?'hi':r.score>=5?'mid':'lo';
+    const fix=r.fix_branch
+      ?`<a class="fix-link" href="https://github.com/${r.repo}/tree/${r.fix_branch}" target="_blank">⎇ ${r.fix_branch.split('/').pop()}</a>`
+      :'<span style="color:var(--border2)">—</span>';
     return `<tr>
       <td class="td-repo">${r.repo.split('/')[1]}</td>
       <td class="td-pr"><a href="https://github.com/${r.repo}/pull/${r.pr_number}" target="_blank">#${r.pr_number}</a></td>
-      <td class="td-title">${(r.pr_title||'—').slice(0,38)}</td>
+      <td class="td-title">${(r.pr_title||'—').slice(0,32)}</td>
       <td><span class="score-chip ${sc}">${r.score.toFixed(1)}</span></td>
       <td><span class="result-chip ${r.passed?'pass':'fail'}">${r.passed?'PASS':'FAIL'}</span></td>
       <td>${fix}</td>
@@ -666,22 +471,18 @@ async function load() {
   }).join('');
 }
 
-function animNum(id, target, suffix) {
-  const el = document.getElementById(id);
-  const start = parseInt(el.textContent) || 0;
-  const dur = 600, fps = 60;
-  let frame = 0;
-  const frames = Math.round(dur / (1000 / fps));
-  const timer = setInterval(() => {
+function animNum(id,target,suffix){
+  const el=document.getElementById(id);
+  const start=parseInt(el.textContent)||0;
+  let frame=0,frames=30;
+  const t=setInterval(()=>{
     frame++;
-    const val = Math.round(start + (target - start) * (frame / frames));
-    el.textContent = val + suffix;
-    if (frame >= frames) clearInterval(timer);
-  }, 1000 / fps);
+    el.textContent=Math.round(start+(target-start)*(frame/frames))+suffix;
+    if(frame>=frames) clearInterval(t);
+  },16);
 }
 
-load();
-setInterval(load, 30000);
+load(); setInterval(load,30000);
 </script>
 </body>
 </html>
