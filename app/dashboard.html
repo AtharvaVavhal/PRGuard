@@ -1,185 +1,425 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>PRGuard Dashboard</title>
+<title>PRGuard · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #080c12;
+  --surface:   #0e141e;
+  --surface2:  #141c28;
+  --border:    #1e2a3a;
+  --border2:   #253245;
+  --text:      #e2eaf5;
+  --muted:     #5a7090;
+  --accent:    #3b82f6;
+  --accent2:   #60a5fa;
+  --green:     #22c55e;
+  --yellow:    #f59e0b;
+  --red:       #ef4444;
+  --purple:    #a78bfa;
+  --radius:    12px;
+}
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #0d1117;
-    color: #e6edf3;
-    min-height: 100vh;
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  header {
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
-    padding: 16px 32px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+html { scroll-behavior: smooth; }
 
-  header .logo { font-size: 22px; font-weight: 700; color: #58a6ff; }
-  header .sub  { font-size: 13px; color: #8b949e; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
 
-  /* KPI Cards */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
-  }
+.wrap { position: relative; z-index: 1; }
 
-  .kpi {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 20px 24px;
-  }
+/* ── HEADER ── */
+header {
+  border-bottom: 1px solid var(--border);
+  background: rgba(8,12,18,0.9);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
-  .kpi .label { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: .05em; }
-  .kpi .value { font-size: 36px; font-weight: 700; margin-top: 6px; }
-  .kpi .value.green  { color: #3fb950; }
-  .kpi .value.blue   { color: #58a6ff; }
-  .kpi .value.yellow { color: #d29922; }
-  .kpi .value.purple { color: #bc8cff; }
+.header-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-  /* Charts row */
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-  @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
 
-  .card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 20px 24px;
-  }
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
 
-  .card h3 { font-size: 14px; color: #8b949e; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; }
+.logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.05em;
+}
 
-  canvas { max-height: 220px; }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-  /* Repo table */
-  .repo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 12px;
-    margin-bottom: 32px;
-  }
+.live-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
 
-  .repo-card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 16px 20px;
-  }
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
 
-  .repo-card .name { font-size: 13px; font-weight: 600; color: #58a6ff; margin-bottom: 10px; word-break: break-all; }
+.live-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
 
-  .repo-meta { display: flex; gap: 16px; font-size: 12px; color: #8b949e; }
-  .repo-meta span b { color: #e6edf3; }
+/* ── LAYOUT ── */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
 
-  /* Reviews table */
-  .table-wrap { overflow-x: auto; }
+/* ── SECTION TITLE ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 10px 12px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: 500; }
-  td { padding: 10px 12px; border-bottom: 1px solid #21262d; vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #1c2128; }
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
 
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  .badge.pass { background: #1a3a1a; color: #3fb950; }
-  .badge.fail { background: #3a1a1a; color: #f85149; }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
 
-  .score-pill {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 13px;
-  }
-  .score-pill.high   { background: #1a3a1a; color: #3fb950; }
-  .score-pill.mid    { background: #2d2a1a; color: #d29922; }
-  .score-pill.low    { background: #3a1a1a; color: #f85149; }
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
 
-  .fix-link { color: #58a6ff; text-decoration: none; font-size: 12px; }
-  .fix-link:hover { text-decoration: underline; }
+.kpi:hover { border-color: var(--border2); }
 
-  .empty { text-align: center; color: #8b949e; padding: 48px; font-size: 14px; }
+.kpi::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.kpi.blue::after  { background: linear-gradient(90deg, var(--accent), transparent); }
+.kpi.green::after { background: linear-gradient(90deg, var(--green), transparent); }
+.kpi.yellow::after{ background: linear-gradient(90deg, var(--yellow), transparent); }
+.kpi.purple::after{ background: linear-gradient(90deg, var(--purple), transparent); }
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.kpi-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.kpi.blue   .kpi-value { color: var(--accent2); }
+.kpi.green  .kpi-value { color: var(--green); }
+.kpi.yellow .kpi-value { color: var(--yellow); }
+.kpi.purple .kpi-value { color: var(--purple); }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+
+.card:hover { border-color: var(--border2); }
+
+/* ── CHARTS ── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+.chart-wrap { position: relative; height: 240px; }
+
+/* ── REPO CARDS ── */
+.repo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.repo-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  transition: border-color 0.2s, transform 0.15s;
+}
+
+.repo-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+.repo-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent2);
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+
+.repo-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.repo-stat { font-size: 12px; color: var(--muted); }
+.repo-stat b { color: var(--text); font-weight: 600; }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; margin-top: 16px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 10px 14px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+
+tr:hover td { background: var(--surface2); }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.badge.pass { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+.badge.fail { background: rgba(239,68,68,0.12);  color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+
+.score {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.score.hi  { color: var(--green);  background: rgba(34,197,94,0.1); }
+.score.mid { color: var(--yellow); background: rgba(245,158,11,0.1); }
+.score.lo  { color: var(--red);    background: rgba(239,68,68,0.1); }
+
+.pr-link, .fix-link {
+  color: var(--accent2);
+  text-decoration: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.pr-link:hover, .fix-link:hover { text-decoration: underline; }
+
+.repo-cell {
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.date-cell {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--muted);
+}
+
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
+
+/* ── SPACING ── */
+.mb-24 { margin-bottom: 24px; }
+.mb-32 { margin-bottom: 32px; }
 </style>
 </head>
+
 <body>
+<div class="wrap">
 
 <header>
-  <div>
-    <div class="logo">🛡️ PRGuard</div>
-    <div class="sub">Team Code Quality Dashboard</div>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <div>
+        <div class="logo-text">PRGuard</div>
+        <div class="logo-sub">CODE QUALITY DASHBOARD</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-dot"></div>
+      <span class="live-label">LIVE</span>
+    </div>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- KPI Cards -->
-  <div class="kpi-grid">
-    <div class="kpi">
-      <div class="label">Total Reviews</div>
-      <div class="value blue" id="kpi-total">—</div>
+  <!-- KPIs -->
+  <div class="section-title">Overview</div>
+  <div class="kpi-grid mb-32">
+    <div class="kpi blue">
+      <div class="kpi-label">Total Reviews</div>
+      <div class="kpi-value" id="kpi-total">—</div>
     </div>
-    <div class="kpi">
-      <div class="label">Pass Rate</div>
-      <div class="value green" id="kpi-pass">—</div>
+    <div class="kpi green">
+      <div class="kpi-label">Pass Rate</div>
+      <div class="kpi-value" id="kpi-pass">—</div>
     </div>
-    <div class="kpi">
-      <div class="label">Avg Score</div>
-      <div class="value yellow" id="kpi-score">—</div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Avg Score</div>
+      <div class="kpi-value" id="kpi-score">—</div>
     </div>
-    <div class="kpi">
-      <div class="label">Repos Tracked</div>
-      <div class="value purple" id="kpi-repos">—</div>
+    <div class="kpi purple">
+      <div class="kpi-label">Repos Tracked</div>
+      <div class="kpi-value" id="kpi-repos">—</div>
     </div>
   </div>
 
   <!-- Charts -->
-  <div class="charts-grid">
+  <div class="section-title">Analytics</div>
+  <div class="charts-grid mb-24">
     <div class="card">
-      <h3>Score Trend</h3>
-      <canvas id="trendChart"></canvas>
+      <div class="section-title" style="margin-bottom:20px;">Score Trend</div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
     </div>
     <div class="card">
-      <h3>Issue Categories</h3>
-      <canvas id="categoryChart"></canvas>
+      <div class="section-title" style="margin-bottom:20px;">Issue Breakdown</div>
+      <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
     </div>
   </div>
 
-  <!-- Per-repo stats -->
-  <div class="card" style="margin-bottom:32px;">
-    <h3>Repos</h3>
-    <div class="repo-grid" id="repo-grid"></div>
+  <!-- Repos -->
+  <div class="card mb-24">
+    <div class="section-title">Repositories</div>
+    <div class="repo-grid" id="repo-grid">
+      <div class="empty"><div class="empty-text">No repos yet</div></div>
+    </div>
   </div>
 
-  <!-- Reviews table -->
+  <!-- Table -->
   <div class="card">
-    <h3>Recent Reviews</h3>
+    <div class="section-title">Recent Reviews</div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -193,115 +433,150 @@
             <th>Date</th>
           </tr>
         </thead>
-        <tbody id="reviews-tbody"></tbody>
+        <tbody id="reviews-tbody">
+          <tr><td colspan="7"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Loading reviews…</div></div></td></tr>
+        </tbody>
       </table>
     </div>
   </div>
 
 </div>
+</div>
 
 <script>
-const COLORS = ['#58a6ff','#3fb950','#d29922','#bc8cff','#f85149','#79c0ff','#56d364','#e3b341'];
+Chart.defaults.color = '#5a7090';
+Chart.defaults.borderColor = '#1e2a3a';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const COLORS = ['#3b82f6','#22c55e','#f59e0b','#a78bfa','#ef4444','#06b6d4','#ec4899','#84cc16'];
 
 async function load() {
   const res  = await fetch('/api/stats');
   const data = await res.json();
 
-  // KPIs
-  document.getElementById('kpi-total').textContent = data.total;
-  document.getElementById('kpi-pass').textContent  = data.pass_rate + '%';
-  document.getElementById('kpi-score').textContent = data.avg_score + '/10';
-  document.getElementById('kpi-repos').textContent = Object.keys(data.repo_stats).length;
+  document.getElementById('kpi-total').textContent = data.total || '0';
+  document.getElementById('kpi-pass').textContent  = (data.pass_rate || 0) + '%';
+  document.getElementById('kpi-score').textContent = (data.avg_score || 0) + '/10';
+  document.getElementById('kpi-repos').textContent = Object.keys(data.repo_stats || {}).length;
 
   if (data.total === 0) {
-    document.getElementById('reviews-tbody').innerHTML =
-      '<tr><td colspan="7" class="empty">No reviews yet — open a Pull Request to get started!</td></tr>';
+    document.getElementById('reviews-tbody').innerHTML = `
+      <tr><td colspan="7">
+        <div class="empty">
+          <div class="empty-icon">🚀</div>
+          <div class="empty-text">No reviews yet — open a Pull Request to get started!</div>
+        </div>
+      </td></tr>`;
     return;
   }
 
-  // Score trend chart
-  const trend = data.score_trend;
+  // Trend chart
+  const trend = data.score_trend || [];
   new Chart(document.getElementById('trendChart'), {
     type: 'line',
     data: {
       labels: trend.map(t => `${t.repo.split('/')[1]} #${t.pr}`),
       datasets: [{
-        label: 'Score',
         data: trend.map(t => t.score),
-        borderColor: '#58a6ff',
-        backgroundColor: 'rgba(88,166,255,0.1)',
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.08)',
         borderWidth: 2,
-        pointRadius: 4,
-        pointBackgroundColor: '#58a6ff',
-        tension: 0.3,
+        pointRadius: 5,
+        pointBackgroundColor: trend.map(t => t.score >= 7 ? '#22c55e' : t.score >= 5 ? '#f59e0b' : '#ef4444'),
+        pointBorderColor: '#080c12',
+        pointBorderWidth: 2,
+        tension: 0.4,
         fill: true,
       }]
     },
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        y: { min: 0, max: 10, grid: { color: '#21262d' }, ticks: { color: '#8b949e' } },
-        x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', maxRotation: 30 } }
-      }
+        y: {
+          min: 0, max: 10,
+          grid: { color: '#1e2a3a' },
+          ticks: { stepSize: 2 }
+        },
+        x: {
+          grid: { color: '#1e2a3a' },
+          ticks: { maxRotation: 35 }
+        }
+      },
+      maintainAspectRatio: false,
     }
   });
 
-  // Category doughnut chart
-  const cats   = Object.keys(data.category_counts);
-  const counts = Object.values(data.category_counts);
+  // Category doughnut
+  const cats   = Object.keys(data.category_counts || {});
+  const counts = Object.values(data.category_counts || {});
   new Chart(document.getElementById('categoryChart'), {
     type: 'doughnut',
     data: {
       labels: cats,
-      datasets: [{ data: counts, backgroundColor: COLORS, borderWidth: 0 }]
+      datasets: [{
+        data: counts,
+        backgroundColor: COLORS,
+        borderColor: '#0e141e',
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
     },
     options: {
       plugins: {
-        legend: { position: 'bottom', labels: { color: '#8b949e', boxWidth: 12, padding: 8 } }
-      }
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, padding: 12, color: '#5a7090' }
+        }
+      },
+      maintainAspectRatio: false,
+      cutout: '65%',
     }
   });
 
   // Repo cards
   const repoGrid = document.getElementById('repo-grid');
-  repoGrid.innerHTML = '';
-  for (const [name, stats] of Object.entries(data.repo_stats)) {
-    repoGrid.innerHTML += `
+  const repos = Object.entries(data.repo_stats || {});
+  if (repos.length === 0) {
+    repoGrid.innerHTML = '<div class="empty"><div class="empty-text">No repos yet</div></div>';
+  } else {
+    repoGrid.innerHTML = repos.map(([name, stats]) => `
       <div class="repo-card">
-        <div class="name">${name}</div>
-        <div class="repo-meta">
-          <span><b>${stats.total}</b> PRs</span>
-          <span><b>${stats.pass_rate}%</b> pass</span>
-          <span><b>${stats.avg_score}/10</b> avg</span>
+        <div class="repo-name">${name}</div>
+        <div class="repo-stats">
+          <div class="repo-stat"><b>${stats.total}</b> PRs</div>
+          <div class="repo-stat"><b>${stats.pass_rate}%</b> pass</div>
+          <div class="repo-stat"><b>${stats.avg_score}/10</b> avg</div>
         </div>
-      </div>`;
+      </div>`).join('');
   }
 
   // Reviews table
   const tbody = document.getElementById('reviews-tbody');
-  tbody.innerHTML = '';
-  for (const r of data.reviews) {
-    const scoreClass = r.score >= 7 ? 'high' : r.score >= 5 ? 'mid' : 'low';
-    const repoName   = r.repo.split('/')[1] || r.repo;
-    const date       = r.reviewed_at.slice(0, 16).replace('T', ' ');
-    const fixCell    = r.fix_branch
+  tbody.innerHTML = (data.reviews || []).map(r => {
+    const sc    = r.score >= 7 ? 'hi' : r.score >= 5 ? 'mid' : 'lo';
+    const repo  = r.repo.split('/')[1] || r.repo;
+    const date  = r.reviewed_at.slice(0, 16).replace('T', ' ');
+    const title = (r.pr_title || '—').slice(0, 40) + ((r.pr_title || '').length > 40 ? '…' : '');
+    const fix   = r.fix_branch
       ? `<a class="fix-link" href="https://github.com/${r.repo}/tree/${r.fix_branch}" target="_blank">🔧 ${r.fix_branch}</a>`
-      : '<span style="color:#8b949e">—</span>';
+      : `<span style="color:var(--muted)">—</span>`;
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${repoName}</td>
-        <td><a class="fix-link" href="https://github.com/${r.repo}/pull/${r.pr_number}" target="_blank">#${r.pr_number}</a></td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.pr_title || '—'}</td>
-        <td><span class="score-pill ${scoreClass}">${r.score.toFixed(1)}</span></td>
-        <td><span class="badge ${r.passed ? 'pass' : 'fail'}">${r.passed ? 'PASSED' : 'FAILED'}</span></td>
-        <td>${fixCell}</td>
-        <td style="color:#8b949e;white-space:nowrap">${date}</td>
-      </tr>`;
-  }
+    return `<tr>
+      <td class="repo-cell">${repo}</td>
+      <td><a class="pr-link" href="https://github.com/${r.repo}/pull/${r.pr_number}" target="_blank">#${r.pr_number}</a></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px">${title}</td>
+      <td><span class="score ${sc}">${r.score.toFixed(1)}</span></td>
+      <td><span class="badge ${r.passed ? 'pass' : 'fail'}">${r.passed ? '✓ PASS' : '✗ FAIL'}</span></td>
+      <td>${fix}</td>
+      <td class="date-cell">${date}</td>
+    </tr>`;
+  }).join('');
 }
 
 load();
+// Auto-refresh every 30s
+setInterval(load, 30_000);
 </script>
 </body>
 </html>

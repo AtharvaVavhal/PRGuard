@@ -1,64 +1,93 @@
 from app.models import ReviewResult, Severity
 
-_SEVERITY_EMOJI = {
-    Severity.HIGH: "🔴",
+SEVERITY_EMOJI = {
+    Severity.HIGH:   "🔴",
     Severity.MEDIUM: "🟡",
-    Severity.LOW: "🔵",
+    Severity.LOW:    "🟢",
 }
 
-_SCORE_BAR_FILLED = "█"
-_SCORE_BAR_EMPTY = "░"
+CATEGORY_EMOJI = {
+    "naming":         "🏷️",
+    "complexity":     "🧩",
+    "duplication":    "♻️",
+    "error_handling": "⚠️",
+    "magic_values":   "🔢",
+    "security":       "🔐",
+    "type_safety":    "🛡️",
+    "dead_code":      "💀",
+    "custom":         "📋",
+}
+
+
+def build_comment(result: ReviewResult, threshold: int) -> str:
+    score = result.score
+    passed = result.passed
+
+    # Header
+    if passed:
+        status_line = f"## ✅ PRGuard Review — PASSED ({score:.1f}/10)"
+        bar = _score_bar(score)
+        header = f"{status_line}\n\n{bar}\n\n> Quality score **{score:.1f}/10** meets the threshold of **{threshold}/10**. This PR is good to merge."
+    else:
+        status_line = f"## ❌ PRGuard Review — FAILED ({score:.1f}/10)"
+        bar = _score_bar(score)
+        header = f"{status_line}\n\n{bar}\n\n> Quality score **{score:.1f}/10** is below the threshold of **{threshold}/10**. Fix the issues below before merging."
+
+    # Summary
+    summary_section = f"### 📋 Summary\n{result.summary}"
+
+    # Issues breakdown
+    if not result.issues:
+        issues_section = "### ✨ Issues\nNo issues found."
+    else:
+        high   = [i for i in result.issues if i.severity == Severity.HIGH]
+        medium = [i for i in result.issues if i.severity == Severity.MEDIUM]
+        low    = [i for i in result.issues if i.severity == Severity.LOW]
+
+        counts = []
+        if high:   counts.append(f"🔴 **{len(high)} High**")
+        if medium: counts.append(f"🟡 **{len(medium)} Medium**")
+        if low:    counts.append(f"🟢 **{len(low)} Low**")
+
+        issues_section = f"### 🐛 Issues Found — {' · '.join(counts)}\n\n"
+
+        for issue in result.issues:
+            sev_emoji  = SEVERITY_EMOJI.get(issue.severity, "⚪")
+            cat_emoji  = CATEGORY_EMOJI.get(issue.category, "🔍")
+            location   = f"`{issue.file}`"
+            if issue.line_range:
+                location += f" {issue.line_range}"
+
+            issues_section += (
+                f"<details>\n"
+                f"<summary>{sev_emoji} {cat_emoji} <strong>{issue.category.upper()}</strong> — {location}</summary>\n\n"
+                f"**Problem:** {issue.description}\n\n"
+                f"**Fix:**\n{issue.suggested_fix}\n\n"
+                f"</details>\n\n"
+            )
+
+    # Stats footer
+    total_issues = len(result.issues)
+    footer = (
+        f"---\n"
+        f"<sub>🛡️ PRGuard · {total_issues} issue{'s' if total_issues != 1 else ''} found · "
+        f"Threshold: {threshold}/10 · "
+        f"💬 Ask me anything: `/prguard <question>`</sub>"
+    )
+
+    return "\n\n".join([header, summary_section, issues_section, footer])
 
 
 def _score_bar(score: float) -> str:
     filled = round(score)
-    return _SCORE_BAR_FILLED * filled + _SCORE_BAR_EMPTY * (10 - filled)
+    empty  = 10 - filled
 
-
-def build_comment(result: ReviewResult, threshold: int) -> str:
-    status_line = (
-        "## ✅ PR Review — PASSED" if result.passed
-        else "## ❌ PR Review — FAILED"
-    )
-
-    bar = _score_bar(result.score)
-    score_line = f"**Score:** `{result.score:.1f} / 10`  `{bar}`  _(threshold: {threshold})_"
-
-    lines = [
-        status_line,
-        "",
-        score_line,
-        "",
-        f"> {result.summary}",
-        "",
-    ]
-
-    if not result.issues:
-        lines.append("_No issues detected._")
+    if score >= 7:
+        color = "🟩"
+    elif score >= 5:
+        color = "🟨"
     else:
-        # Group by severity
-        for severity in [Severity.HIGH, Severity.MEDIUM, Severity.LOW]:
-            group = [i for i in result.issues if i.severity == severity]
-            if not group:
-                continue
+        color = "🟥"
 
-            emoji = _SEVERITY_EMOJI[severity]
-            lines.append(f"### {emoji} {severity.value.upper()} severity ({len(group)})")
-            lines.append("")
-
-            for issue in group:
-                loc = f"`{issue.file}`"
-                if issue.line_range:
-                    loc += f" {issue.line_range}"
-                lines.append(f"**[{issue.category}]** {loc}")
-                lines.append(f"- **Problem:** {issue.description}")
-                lines.append(f"- **Fix:** {issue.suggested_fix}")
-                lines.append("")
-
-    lines += [
-        "---",
-        "_Powered by [pr-reviewer](https://github.com/your-org/pr-reviewer). "
-        "Score must be ≥ {} to merge._".format(threshold),
-    ]
-
-    return "\n".join(lines)
+    bar = color * filled + "⬜" * empty
+    return f"`{bar}` **{score:.1f}/10**"

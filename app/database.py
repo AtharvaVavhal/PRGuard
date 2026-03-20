@@ -25,7 +25,7 @@ def init_db() -> None:
                 pr_title    TEXT,
                 score       REAL NOT NULL,
                 passed      INTEGER NOT NULL,
-                issues      TEXT NOT NULL,   -- JSON array
+                issues      TEXT NOT NULL,
                 fix_branch  TEXT,
                 reviewed_at TEXT NOT NULL
             )
@@ -64,9 +64,31 @@ def save_review(
     logger.info("Saved review for %s#%d (score=%.1f)", repo, pr_number, score)
 
 
+def get_latest_review(repo: str, pr_number: int) -> dict | None:
+    """
+    Returns the most recent review for a given repo + PR number, or None.
+    """
+    with _conn() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM reviews
+            WHERE repo = ? AND pr_number = ?
+            ORDER BY reviewed_at DESC
+            LIMIT 1
+            """,
+            (repo, pr_number),
+        ).fetchone()
+
+    if not row:
+        return None
+
+    review = dict(row)
+    review["issues"] = json.loads(review["issues"])
+    return review
+
+
 def get_stats() -> dict:
     with _conn() as conn:
-        # All reviews ordered by time
         rows = conn.execute(
             "SELECT * FROM reviews ORDER BY reviewed_at DESC"
         ).fetchall()
@@ -84,7 +106,6 @@ def get_stats() -> dict:
 
     reviews = [dict(r) for r in rows]
 
-    # Parse issues JSON
     for r in reviews:
         r["issues"] = json.loads(r["issues"])
 
@@ -92,20 +113,17 @@ def get_stats() -> dict:
     passed = sum(1 for r in reviews if r["passed"])
     avg_score = sum(r["score"] for r in reviews) / total
 
-    # Score trend (last 20 reviews, oldest first)
     score_trend = [
         {"date": r["reviewed_at"][:10], "score": r["score"], "repo": r["repo"], "pr": r["pr_number"]}
         for r in reversed(reviews[:20])
     ]
 
-    # Issue category counts across all reviews
     category_counts: dict[str, int] = {}
     for r in reviews:
         for issue in r["issues"]:
             cat = issue.get("category", "unknown")
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
-    # Per-repo stats
     repo_stats: dict[str, dict] = {}
     for r in reviews:
         repo = r["repo"]
@@ -124,7 +142,7 @@ def get_stats() -> dict:
         "total": total,
         "pass_rate": round(passed / total * 100),
         "avg_score": round(avg_score, 1),
-        "reviews": reviews[:50],  # latest 50 for table
+        "reviews": reviews[:50],
         "score_trend": score_trend,
         "category_counts": category_counts,
         "repo_stats": repo_stats,

@@ -1,8 +1,9 @@
 import json
 import logging
+import time
 from typing import Optional
 
-from groq import Groq
+from groq import Groq, RateLimitError, APIStatusError
 
 from app.config import settings
 from app.models import ReviewResult, CodeIssue, Severity
@@ -54,6 +55,49 @@ OUTPUT FORMAT — respond ONLY with a valid JSON object, no markdown, no explana
   ]
 }"""
 
+MAX_RETRIES = 4
+RETRY_DELAYS = [5, 15, 30, 60]  # seconds between retries
+
+
+def _groq_call_with_retry(messages: list, response_format: dict | None = None) -> str:
+    """
+    Call Groq API with exponential backoff on rate limit errors.
+    Returns the raw text content of the response.
+    """
+    kwargs = {
+        "model": settings.GROQ_MODEL,
+        "messages": messages,
+        "temperature": 0.1,
+    }
+    if response_format:
+        kwargs["response_format"] = response_format
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = client.chat.completions.create(**kwargs)
+            return response.choices[0].message.content.strip()
+
+        except RateLimitError as exc:
+            if attempt == MAX_RETRIES - 1:
+                logger.error("Groq rate limit exceeded after %d retries: %s", MAX_RETRIES, exc)
+                raise
+            delay = RETRY_DELAYS[attempt]
+            logger.warning(
+                "Groq rate limit hit (attempt %d/%d) — retrying in %ds",
+                attempt + 1, MAX_RETRIES, delay
+            )
+            time.sleep(delay)
+
+        except APIStatusError as exc:
+            if exc.status_code == 503 and attempt < MAX_RETRIES - 1:
+                delay = RETRY_DELAYS[attempt]
+                logger.warning("Groq service unavailable — retrying in %ds", delay)
+                time.sleep(delay)
+            else:
+                raise
+
+    raise RuntimeError("Groq call failed after all retries")
+
 
 def _build_prompt(pr_title: str, diff: str, custom_rules: list[str]) -> str:
     MAX_DIFF_CHARS = 12_000
@@ -94,17 +138,14 @@ def review_pr(
         len(diff), len(custom_rules)
     )
 
-    response = client.chat.completions.create(
-        model=settings.GROQ_MODEL,
+    raw = _groq_call_with_retry(
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": _build_prompt(pr_title, diff, custom_rules)},
         ],
-        temperature=0.1,
         response_format={"type": "json_object"},
     )
 
-    raw = response.choices[0].message.content.strip()
     logger.debug("Raw Groq response: %s", raw[:500])
     data = json.loads(raw)
 
