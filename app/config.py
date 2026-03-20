@@ -5,7 +5,7 @@ load_dotenv()
 
 
 class Settings:
-    GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
+    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
     GITHUB_WEBHOOK_SECRET: str = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
