@@ -31,6 +31,66 @@ No configuration required. Just add the webhook and it works.
 
 ---
 
+## ⚡ How PRGuard Works
+
+Here is the complete step-by-step flow from PR to review:
+
+```
+Developer pushes code → GitHub sends webhook → PRGuard reviews → Results posted
+```
+
+**Step 1 — Developer opens a Pull Request**
+> A developer pushes code to a branch and opens a PR on GitHub.
+
+**Step 2 — GitHub sends a webhook event**
+> GitHub instantly sends a POST request to PRGuard's webhook endpoint with the PR payload.
+
+**Step 3 — Signature verified**
+> PRGuard verifies the HMAC-SHA256 webhook signature to confirm the request is genuine.
+
+**Step 4 — Diff fetched**
+> PRGuard calls the GitHub API to fetch the full code diff of the PR.
+
+**Step 5 — Custom rules loaded**
+> PRGuard checks if a `prguard.yml` file exists in the repo root and loads any custom rules and threshold.
+
+**Step 6 — AI reviews the code**
+> The diff + custom rules are sent to LLaMA 3.3 via Groq. The model scores the code 0–10 and identifies issues across 8 categories.
+
+**Step 7 — Inline comments posted**
+> PRGuard posts a comment directly on each problem line in the diff with severity, category, description, and fix.
+
+**Step 8 — Summary comment posted**
+> A formatted summary comment is posted on the PR with the score bar, verdict, and all issues in collapsible sections.
+
+**Step 9 — Auto-fix branch created** *(if PR failed)*
+> PRGuard creates a new branch `prguard/fix-pr-{number}-{sha}`, applies AI corrections to each affected file, and pushes the fixes.
+
+**Step 10 — Review saved to database**
+> The review result is saved to PostgreSQL for dashboard analytics and chat history.
+
+**Step 11 — Commit status set**
+> GitHub commit status is set to ✅ `success` (score ≥ threshold) or ❌ `failure` (score < threshold).
+
+**Step 12 — Developer can chat with the bot**
+> Developer comments `/prguard <question>` on the PR and the bot replies with a context-aware answer.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     PRGuard Pipeline                         │
+├──────────┬──────────┬──────────┬──────────┬────────────────┤
+│  Step 1  │  Step 2  │  Step 3  │  Step 4  │    Step 5      │
+│  PR Open │ Webhook  │ Verify   │  Fetch   │  Load Rules    │
+│          │  Event   │   Sig    │   Diff   │  prguard.yml   │
+├──────────┼──────────┼──────────┼──────────┼────────────────┤
+│  Step 6  │  Step 7  │  Step 8  │  Step 9  │   Step 10-12  │
+│ AI Review│ Inline   │ Summary  │ Auto-Fix │  Save + Status │
+│  Groq    │Comments  │ Comment  │  Branch  │  + Chat        │
+└──────────┴──────────┴──────────┴──────────┴────────────────┘
+```
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
@@ -143,7 +203,7 @@ PRGuard/
 │   ├── home.html         # Landing page
 │   ├── rules.py          # prguard.yml parser
 │   ├── chat.py           # /prguard chat handler
-│   ├── models.py         # Pydantic models
+│   ├── models.py         # Pydantic data models
 │   └── config.py         # Settings & env vars
 ├── prguard.yml           # Custom rules example
 ├── Procfile              # Railway start command
@@ -219,7 +279,6 @@ threshold: 7
 
 ```bash
 # 1. Fork this repo on GitHub
-
 # 2. Go to railway.app → New Project → Deploy from GitHub repo
 # 3. Add PostgreSQL database to the project
 # 4. Set all environment variables in the Variables tab
