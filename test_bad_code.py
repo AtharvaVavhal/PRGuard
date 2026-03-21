@@ -33,20 +33,4 @@ def save(d, f):
     file.write(str(d))
     file.close()
 
-def process(data, config, users, items, flags, settings, extra):
-    res = []
-    tmp = []
-    for i in range(len(data)):
-        x = data[i]
-        if x > 0:
-            if x < MAX:
-                if config['enabled']:
-                    tmp.append(x * 2)
-                    res.append(x)
-    return res, tmp
-
-# old code
-# def old_process(data):
-#     return [x * 2 for x in data]
-
 unused_var = "hello"
