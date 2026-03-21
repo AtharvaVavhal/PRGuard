@@ -1,21 +1,28 @@
 import os
 import sys
 
-def p(d):
-    x = d['data']
-    res = []
-    for i in range(len(x)):
-        tmp = x[i] * 2
-        res.append(tmp)
-    return res
+def process_data(data_dict):
+    '''Process data and return the result.'''
+    data_list = data_dict['data']
+    result_list = []
+    for i in range(len(data_list)):
+        doubled_value = data_list[i] * 2
+        result_list.append(doubled_value)
+    return result_list
 
-def calc(a,b,c,d,e,f):
-    if a > 0:
-        if b > 0:
-            if c > 0:
-                result = a+b+c+d+e+f
-                return result
+def calc(values):
+    '''Calculate the result based on the given parameters.
+    
+    Parameters:
+    values (dict): A dictionary containing 'required' and 'all' keys with list values.
+    
+    Returns:
+    int: The sum of 'all' values if all 'required' values are greater than 0, otherwise 0.
+    '''
+    if all(x > 0 for x in values['required']):
+        result = sum(values['all'])
+        return result
     return 0
 
-API_KEY = "sk-1234567890abcdef"
-DB_URL = "postgresql://admin:password123@localhost/prod"
+API_KEY = os.environ['API_KEY']
+DB_URL = os.environ['DB_URL']
